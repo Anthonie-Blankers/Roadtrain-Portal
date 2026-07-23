@@ -1,0 +1,172 @@
+:root {
+    --blauw: #0b3d63;
+    --blauw-licht: #eaf1f7;
+    --geel: #f2a900;
+    --grijs: #6b7280;
+    --rand: #d9e0e7;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    margin: 0;
+    color: #1a2733;
+    background: #f7f9fb;
+}
+
+.wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.topbar {
+    background: var(--blauw);
+    color: white;
+}
+
+.topbar .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+}
+
+.logo {
+    color: white;
+    font-weight: 700;
+    font-size: 1.2rem;
+    text-decoration: none;
+}
+
+.topbar nav a {
+    color: white;
+    text-decoration: none;
+    margin-left: 20px;
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+.topbar nav a:hover { opacity: 1; text-decoration: underline; }
+
+main.wrap { padding-top: 30px; padding-bottom: 60px; min-height: 60vh; }
+
+h1 { font-size: 1.5rem; color: var(--blauw); margin-bottom: 20px; }
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    background: white;
+    border: 1px solid var(--rand);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    align-items: end;
+}
+
+.filter-group { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.filter-group label { color: var(--grijs); font-weight: 600; }
+.filter-group input, .filter-group select {
+    padding: 6px 8px;
+    border: 1px solid var(--rand);
+    border-radius: 5px;
+    font-size: 0.9rem;
+}
+.range-pair { display: flex; align-items: center; gap: 6px; }
+.range-pair input { width: 70px; }
+.checkbox-group { justify-content: center; }
+.checkbox-group label { display: flex; align-items: center; gap: 6px; font-weight: 400; }
+
+button {
+    background: var(--blauw);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+button:hover { background: #092f4d; }
+.reset-link { margin-left: 10px; font-size: 0.85rem; color: var(--grijs); }
+
+table.offers {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border: 1px solid var(--rand);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+table.offers th {
+    background: var(--blauw-licht);
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--blauw);
+}
+
+table.offers td {
+    padding: 10px 12px;
+    border-top: 1px solid var(--rand);
+    font-size: 0.9rem;
+    vertical-align: top;
+}
+
+table.offers tr.vervuld { opacity: 0.5; }
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+}
+.badge-vracht { background: var(--geel); color: #3a2900; }
+.badge-ruimte { background: var(--blauw); }
+
+.empty { text-align: center; color: var(--grijs); padding: 30px !important; }
+
+.beheer-link { font-size: 0.8rem; color: var(--grijs); }
+
+.offer-form {
+    background: white;
+    border: 1px solid var(--rand);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 640px;
+}
+.form-row { margin-bottom: 16px; display: flex; flex-direction: column; gap: 4px; }
+.form-row label { font-weight: 600; font-size: 0.85rem; color: var(--grijs); }
+.form-row input, .form-row select {
+    padding: 8px 10px;
+    border: 1px solid var(--rand);
+    border-radius: 5px;
+    font-size: 0.95rem;
+}
+.two-col { flex-direction: row; gap: 16px; }
+.two-col > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+
+.code {
+    display: inline-block;
+    background: var(--blauw-licht);
+    color: var(--blauw);
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+}
+
+.footer {
+    text-align: center;
+    color: var(--grijs);
+    font-size: 0.8rem;
+    padding: 20px 0;
+    border-top: 1px solid var(--rand);
+}
