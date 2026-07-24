@@ -155,7 +155,7 @@ app.get('/', (req, res) => {
         <td>${o.gewicht ? esc(o.gewicht) + ' t' : '-'}</td>
         <td>${o.type_lading ? esc(o.type_lading) : '-'}${o.opmerking ? '<br><small>' + esc(o.opmerking) + '</small>' : ''}</td>
         <td>${esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; ${esc(o.telefoon)}${o.email ? ' &middot; ' + esc(o.email) : ''}</small></td>
-        <td><a href="/aanbieding/${o.id}" class="beheer-link">beheren</a></td>
+        <td><a href="/aanbieding/${o.id}" class="beheer-link">Beheer</a></td>
         </tr>`).join('');
 
         const body = `
