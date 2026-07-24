@@ -73,7 +73,7 @@ function layout(title, body) {
   ${body}
   </main>
   <footer class="wrap footer">
-  <p>Betrouwbaar transport sinds 1850 &mdash; interne beurs voor combi's (14&ndash;15,6 laadmeter, 2,60&ndash;3,05m hoogte)</p>
+  <p>Betrouwbaar transport sinds 1850 &mdash; interne beurs voor combi's (13,65&ndash;16,0 laadmeter, 0,10&ndash;3,10m hoogte)</p>
   </footer>
   </body>
   </html>`;
@@ -94,16 +94,16 @@ app.get('/', (req, res) => {
   const type = q.type || 'alle';
   const vanLand = q.van_land || 'alle';
   const naarLand = q.naar_land || 'alle';
-  const vanTekst = (q.van || '').toLowerCase();
-  const naarTekst = (q.naar || '').toLowerCase();
+  const vanPcs = [q.van_pc1, q.van_pc2, q.van_pc3].map(v => (v || '').trim().toLowerCase()).filter(Boolean);
+  const naarPcs = [q.naar_pc1, q.naar_pc2, q.naar_pc3].map(v => (v || '').trim().toLowerCase()).filter(Boolean);
   const laadVanaf = q.laad_vanaf || '';
   const laadTot = q.laad_tot || '';
   const losVanaf = q.los_vanaf || '';
   const losTot = q.los_tot || '';
-  const lmMin = q.lm_min !== undefined && q.lm_min !== '' ? parseFloat(q.lm_min) : 14;
-  const lmMax = q.lm_max !== undefined && q.lm_max !== '' ? parseFloat(q.lm_max) : 15.6;
-  const hMin = q.h_min !== undefined && q.h_min !== '' ? parseFloat(q.h_min) : 2.6;
-  const hMax = q.h_max !== undefined && q.h_max !== '' ? parseFloat(q.h_max) : 3.05;
+  const lmMin = q.lm_min !== undefined && q.lm_min !== '' ? parseFloat(q.lm_min) : 13.65;
+  const lmMax = q.lm_max !== undefined && q.lm_max !== '' ? parseFloat(q.lm_max) : 16.0;
+  const hMin = q.h_min !== undefined && q.h_min !== '' ? parseFloat(q.h_min) : 0.1;
+  const hMax = q.h_max !== undefined && q.h_max !== '' ? parseFloat(q.h_max) : 3.10;
   const toonAfgehandeld = q.toon_afgehandeld === '1';
 
         function overlapt(startO, eindO, filterVanaf, filterTot) {
@@ -115,11 +115,11 @@ app.get('/', (req, res) => {
           return oVan <= tot && vanaf <= oTot;
         }
 
-        function matchLocatie(land, postcode, plaats, filterLand, filterTekst) {
+        function matchLocatie(land, postcode, filterLand, pcPrefixes) {
           if (filterLand && filterLand !== 'alle' && land !== filterLand) return false;
-          if (filterTekst) {
-            const hay = `${postcode || ''} ${plaats || ''}`.toLowerCase();
-            if (!hay.includes(filterTekst)) return false;
+          if (pcPrefixes.length) {
+            const pc = (postcode || '').toLowerCase();
+            if (!pcPrefixes.some(p => pc.startsWith(p))) return false;
           }
           return true;
         }
@@ -127,8 +127,8 @@ app.get('/', (req, res) => {
         const filtered = offers.filter(o => {
           if (!toonAfgehandeld && o.status === 'vervuld') return false;
           if (type !== 'alle' && o.type !== type) return false;
-          if (!matchLocatie(o.van_land, o.van_postcode, o.van_plaats, vanLand, vanTekst)) return false;
-          if (!matchLocatie(o.naar_land, o.naar_postcode, o.naar_plaats, naarLand, naarTekst)) return false;
+          if (!matchLocatie(o.van_land, o.van_postcode, vanLand, vanPcs)) return false;
+          if (!matchLocatie(o.naar_land, o.naar_postcode, naarLand, naarPcs)) return false;
           if (!overlapt(o.laaddatum_van, o.laaddatum_tot, laadVanaf, laadTot)) return false;
           if (!overlapt(o.losdatum_van, o.losdatum_tot, losVanaf, losTot)) return false;
           const lm = parseFloat(o.laadmeter);
@@ -153,7 +153,7 @@ app.get('/', (req, res) => {
         <td>${esc(o.laadmeter)} lm</td>
         <td>${esc(o.hoogte)} m</td>
         <td>${o.gewicht ? esc(o.gewicht) + ' t' : '-'}</td>
-        <td>${esc(o.omschrijving || '-')}</td>
+        <td>${o.type_lading ? esc(o.type_lading) : '-'}${o.opmerking ? '<br><small>' + esc(o.opmerking) + '</small>' : ''}</td>
         <td>${esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; ${esc(o.telefoon)}${o.email ? ' &middot; ' + esc(o.email) : ''}</small></td>
         <td><a href="/aanbieding/${o.id}" class="beheer-link">beheren</a></td>
         </tr>`).join('');
@@ -174,16 +174,24 @@ app.get('/', (req, res) => {
         <select name="van_land">${landOptions(vanLand, true)}</select>
         </div>
         <div class="filter-group">
-        <label>Van &ndash; postcode/plaats</label>
-        <input type="text" name="van" value="${esc(q.van || '')}" placeholder="bijv. 3011 of Rotterdam">
+        <label>Van &ndash; postcodegebied</label>
+        <div class="pc-triplet">
+        <input type="text" name="van_pc1" value="${esc(q.van_pc1 || '')}" maxlength="4" placeholder="bijv. 50">
+        <input type="text" name="van_pc2" value="${esc(q.van_pc2 || '')}" maxlength="4" placeholder="bijv. 51">
+        <input type="text" name="van_pc3" value="${esc(q.van_pc3 || '')}" maxlength="4" placeholder="bijv. 52">
+        </div>
         </div>
         <div class="filter-group">
         <label>Naar &ndash; land</label>
         <select name="naar_land">${landOptions(naarLand, true)}</select>
         </div>
         <div class="filter-group">
-        <label>Naar &ndash; postcode/plaats</label>
-        <input type="text" name="naar" value="${esc(q.naar || '')}" placeholder="bijv. 20100 of Milaan">
+        <label>Naar &ndash; postcodegebied</label>
+        <div class="pc-triplet">
+        <input type="text" name="naar_pc1" value="${esc(q.naar_pc1 || '')}" maxlength="4" placeholder="bijv. 2">
+        <input type="text" name="naar_pc2" value="${esc(q.naar_pc2 || '')}" maxlength="4" placeholder="bijv. 3">
+        <input type="text" name="naar_pc3" value="${esc(q.naar_pc3 || '')}" maxlength="4" placeholder="bijv. 4">
+        </div>
         </div>
         <div class="filter-group">
         <label>Laden van&ndash;tot</label>
@@ -307,17 +315,23 @@ app.get('/nieuw', (req, res) => {
   </div>
   <div class="form-row two-col">
   <div>
-  <label>Laadmeter (14&ndash;15,6)</label>
-  <input type="number" step="0.1" min="0" max="15.6" name="laadmeter" required placeholder="bijv. 15.5">
+  <label>Laadmeter</label>
+  <input type="number" step="0.1" min="13.65" max="16.0" name="laadmeter" required placeholder="bijv. 15.5">
   </div>
   <div>
-  <label>Hoogte (2,60&ndash;3,05 m)</label>
-  <input type="number" step="0.01" min="0" max="3.05" name="hoogte" required placeholder="bijv. 3.00">
+  <label>Hoogte (m)</label>
+  <input type="number" step="0.01" min="0.1" max="3.10" name="hoogte" required placeholder="bijv. 3.00">
   </div>
   </div>
-  <div class="form-row">
-  <label>Type lading / opmerking</label>
-  <input type="text" name="omschrijving" placeholder="bijv. blokpallets, geen stapelen">
+  <div class="form-row two-col">
+  <div>
+  <label>Type lading</label>
+  <input type="text" name="type_lading" placeholder="bijv. blokpallets">
+  </div>
+  <div>
+  <label>Opmerking</label>
+  <input type="text" name="opmerking" placeholder="bijv. geen stapelen">
+  </div>
   </div>
   <div class="form-row two-col">
   <div>
@@ -371,7 +385,8 @@ app.post('/nieuw', (req, res) => {
            laadmeter: req.body.laadmeter || '',
            hoogte: req.body.hoogte || '',
            gewicht: req.body.gewicht || '',
-           omschrijving: req.body.omschrijving || '',
+           type_lading: req.body.type_lading || '',
+           opmerking: req.body.opmerking || '',
            bedrijf: req.body.bedrijf || '',
            contactpersoon: req.body.contactpersoon || '',
            telefoon: req.body.telefoon || '',
