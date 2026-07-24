@@ -1,4 +1,4 @@
-const express = require('express');
+con<td><span class="route-part">${esc(locatie(o.van_land, o.van_postcode, o.van_plaats))}</span> &rarr; <span class="route-part">${esc(locatie(o.naar_land, o.naar_postcode, o.naar_plaats))}</span></td>st express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -141,13 +141,13 @@ app.get('/', (req, res) => {
         function periode(van_, tot_) {
           if (!van_) return '-';
           if (!tot_ || tot_ === van_) return esc(van_);
-          return `${esc(van_)} &ndash; ${esc(tot_)}`;
+          return `${esc(van_)}<br>&ndash; ${esc(tot_)}`;
         }
 
         const rows = filtered.map(o => `
         <tr class="${o.status === 'vervuld' ? 'vervuld' : ''}">
         <td><span class="badge badge-${o.type}">${o.type === 'vracht' ? 'Vracht' : 'Combi vrij'}</span></td>
-        <td>${esc(locatie(o.van_land, o.van_postcode, o.van_plaats))} &rarr; ${esc(locatie(o.naar_land, o.naar_postcode, o.naar_plaats))}</td>
+        <td><span class="route-part">${esc(locatie(o.van_land, o.van_postcode, o.van_plaats))}</span> &rarr; <span class="route-part">${esc(locatie(o.naar_land, o.naar_postcode, o.naar_plaats))}</span></td>
         <td>${periode(o.laaddatum_van, o.laaddatum_tot)}</td>
         <td>${periode(o.losdatum_van, o.losdatum_tot)}</td>
         <td>${esc(o.laadmeter)} lm</td>
