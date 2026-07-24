@@ -259,8 +259,8 @@ app.get('/nieuw', (req, res) => {
   <div class="form-row">
   <label>Type aanbieding</label>
   <select name="type" required>
-  <option value="vracht">Vracht aanbieden (Ik zoek een vervoerder met een (volume)combi)</option>
-  <option value="ruimte">Capaciteit aanbieden (Ik heb een (volume)combi beschikbaar)</option>
+  <option value="vracht">Vracht aanbieden (Ik zoek een vervoerder met een combi)</option>
+  <option value="ruimte">Capaciteit aanbieden (Ik heb een combi beschikbaar)</option>
   </select>
   </div>
   <div class="form-row two-col">
@@ -423,8 +423,8 @@ app.get('/aanbieding/:id', (req, res) => {
                                     <div class="form-row">
                                             <label>Type aanbieding</label>
                                                     <select name="type" required>
-                                                            <option value="vracht" ${offer.type === 'vracht' ? 'selected' : ''}>Vracht aanbieden (Ik zoek een vervoerder met een (volume)combi)</option>
-                                                                    <option value="ruimte" ${offer.type === 'ruimte' ? 'selected' : ''}>Capaciteit aanbieden (Ik heb een (volume)combi beschikbaar)</option>
+                                                            <option value="vracht" ${offer.type === 'vracht' ? 'selected' : ''}>Vracht aanbieden (Ik zoek een vervoerder met een combi)</option>
+                                                                    <option value="ruimte" ${offer.type === 'ruimte' ? 'selected' : ''}>Capaciteit aanbieden (Ik heb een combi beschikbaar)</option>
                                                                             </select>
                                                                                     </div>
                                                                                             <div class="form-row two-col">
