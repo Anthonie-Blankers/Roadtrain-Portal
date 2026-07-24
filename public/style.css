@@ -97,7 +97,7 @@ h1 { font-size: 1.5rem; color: var(--blauw); margin-bottom: 20px; }
 }
 .range-pair { display: flex; align-items: center; gap: 6px; }
 .range-pair input { width: 70px; }
-.filters input[type="date"] { width: 108px; }
+.filters input[type="date"] { width: 136px; }
 .pc-triplet { display: flex; align-items: center; gap: 6px; }
 .pc-triplet input { width: 46px; text-align: center; }
 .checkbox-group { justify-content: center; }
