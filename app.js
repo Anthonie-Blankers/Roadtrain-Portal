@@ -62,7 +62,7 @@ function layout(title, body) {
   <body>
   <header class="topbar">
   <div class="wrap">
-  <a href="/" class="logo">Combi-beurs</a>
+  <a href="/" class="logo"><img src="/logo.png" alt="CombiMatch" class="logo-img">Combi-beurs</a>
   <nav>
   <a href="/">Overzicht</a>
   <a href="/nieuw">Aanbieding plaatsen</a>
@@ -73,7 +73,7 @@ function layout(title, body) {
   ${body}
   </main>
   <footer class="wrap footer">
-  <p>Betrouwbaar transport sinds 1850 &mdash; interne beurs voor combi's (13,65&ndash;16,0 laadmeter, 0,10&ndash;3,10m hoogte)</p>
+  <p>CombiMatch &ndash; The Roadtrain Exchange verbindt vervoerders met (volume)combi's van alle types. Via &eacute;&eacute;n platform deel je eenvoudig beschikbare capaciteit, vind je passende vrachten en werk je samen met betrouwbare transportpartners. Zo verhogen we samen de beladingsgraad, beperken we lege kilometers en maken we transport slimmer, duurzamer en rendabeler.</p>
   </footer>
   </body>
   </html>`;
