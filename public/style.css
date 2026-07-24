@@ -76,6 +76,8 @@ h1 { font-size: 1.5rem; color: var(--blauw); margin-bottom: 20px; }
 }
 .range-pair { display: flex; align-items: center; gap: 6px; }
 .range-pair input { width: 70px; }
+.pc-triplet { display: flex; align-items: center; gap: 6px; }
+.pc-triplet input { width: 46px; text-align: center; }
 .checkbox-group { justify-content: center; }
 .checkbox-group label { display: flex; align-items: center; gap: 6px; font-weight: 400; }
 
@@ -98,6 +100,7 @@ table.offers {
     border: 1px solid var(--rand);
     border-radius: 8px;
     overflow: hidden;
+    table-layout: fixed;
 }
 
 table.offers th {
@@ -115,7 +118,13 @@ table.offers td {
     border-top: 1px solid var(--rand);
     font-size: 0.9rem;
     vertical-align: top;
+    word-wrap: break-word;
 }
+
+table.offers th:nth-child(2), table.offers td:nth-child(2) { width: 22%; }
+table.offers th:nth-child(5), table.offers td:nth-child(5) { width: 6%; }
+table.offers th:nth-child(6), table.offers td:nth-child(6) { width: 6%; }
+table.offers th:nth-child(7), table.offers td:nth-child(7) { width: 6%; }
 
 table.offers tr.vervuld { opacity: 0.5; }
 
@@ -139,7 +148,7 @@ table.offers tr.vervuld { opacity: 0.5; }
     border: 1px solid var(--rand);
     border-radius: 8px;
     padding: 24px;
-    max-width: 640px;
+    max-width: 860px;
 }
 .form-row { margin-bottom: 16px; display: flex; flex-direction: column; gap: 4px; }
 .form-row label { font-weight: 600; font-size: 0.85rem; color: var(--grijs); }
@@ -150,7 +159,7 @@ table.offers tr.vervuld { opacity: 0.5; }
     font-size: 0.95rem;
 }
 .two-col { flex-direction: row; gap: 16px; }
-.two-col > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.two-col > div { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 
 .code {
     display: inline-block;
