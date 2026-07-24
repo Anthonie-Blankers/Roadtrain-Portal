@@ -316,7 +316,7 @@ app.get('/nieuw', (req, res) => {
   <div class="form-row two-col">
   <div>
   <label>Laadmeter</label>
-  <input type="number" step="0.1" min="13.65" max="16.0" name="laadmeter" required placeholder="bijv. 15.5">
+  <input type="number" step="any" min="13.65" max="16.0" name="laadmeter" required placeholder="bijv. 15.5">
   </div>
   <div>
   <label>Hoogte (m)</label>
