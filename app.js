@@ -209,6 +209,7 @@ app.get('/', (req, res) => {
         <input type="date" name="los_tot" value="${esc(losTot)}">
         </div>
         </div>
+        <div class="filter-pair">
         <div class="filter-group">
         <label>Laadmeter min&ndash;max</label>
         <div class="range-pair">
@@ -223,6 +224,7 @@ app.get('/', (req, res) => {
         <input type="number" step="0.01" name="h_min" value="${hMin}">
         <span>&ndash;</span>
         <input type="number" step="0.01" name="h_max" value="${hMax}">
+        </div>
         </div>
         </div>
         <div class="filter-group checkbox-group">
