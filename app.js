@@ -62,7 +62,7 @@ function layout(title, body) {
   <body>
   <header class="topbar">
   <div class="wrap">
-  <a href="/" class="logo"><img src="/logo.png" alt="CombiMatch" class="logo-img">Combi-beurs</a>
+  <a href="/" class="logo"><img src="/logo.png" alt="CombiMatch" class="logo-img">Combi-Match</a>
   <nav>
   <a href="/">Overzicht</a>
   <a href="/nieuw">Aanbieding plaatsen</a>
@@ -246,7 +246,7 @@ app.get('/', (req, res) => {
         </table>
         `;
 
-        res.send(layout('Combi-beurs — Overzicht', body));
+        res.send(layout('Combi-Match — Overzicht', body));
 });
 
 // new offer form
@@ -358,7 +358,7 @@ app.get('/nieuw', (req, res) => {
   </div>
   </form>
   `;
-  res.send(layout('Combi-beurs — Nieuwe aanbieding', body));
+  res.send(layout('Combi-Match — Nieuwe aanbieding', body));
 });
 
 // create offer
@@ -403,7 +403,7 @@ app.post('/nieuw', (req, res) => {
          <p>Je aanbieding staat nu in het overzicht.</p>
          <p><a href="/">Terug naar overzicht</a> &middot; <a href="/nieuw">Nog een aanbieding plaatsen</a></p>
          `;
-  res.send(layout('Combi-beurs — Geplaatst', body));
+  res.send(layout('Combi-Match — Geplaatst', body));
 });
 
 // manage single offer (mark done / delete)
@@ -527,7 +527,7 @@ app.get('/aanbieding/:id', (req, res) => {
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             <button type="submit" name="actie" value="verwijderen">Verwijderen</button>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     </form>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             `;
-    res.send(layout('Combi-beurs — Bewerken', body));
+    res.send(layout('Combi-Match — Bewerken', body));
 });
 
 app.post('/aanbieding/:id/bewerken', (req, res) => {
@@ -579,5 +579,5 @@ app.post('/aanbieding/:id/status', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Combi-beurs draait op http://localhost:${PORT}`);
+  console.log(`Combi-Match draait op http://localhost:${PORT}`);
 });
