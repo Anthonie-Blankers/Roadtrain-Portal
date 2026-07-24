@@ -81,12 +81,11 @@ h1 { font-size: 1.5rem; color: var(--blauw); margin-bottom: 20px; }
 .filters > .filter-group:nth-child(3) { grid-row: 1; grid-column: 3; }
 .filters > .filter-group:nth-child(4) { grid-row: 1; grid-column: 4; }
 .filters > .filter-group:nth-child(5) { grid-row: 1; grid-column: 5; }
-.filters > .filter-group:nth-child(6) { grid-row: 2; grid-column: 2; justify-self: center; }
-.filters > .filter-group:nth-child(7) { grid-row: 2; grid-column: 4; justify-self: center; }
-.filters > .filter-group:nth-child(8) { grid-row: 3; grid-column: 2; justify-self: center; }
-.filters > .filter-group:nth-child(9) { grid-row: 3; grid-column: 4; justify-self: center; }
-.filters > .filter-group:nth-child(10) { grid-row: 4; grid-column: 1 / span 3; }
-.filters > .filter-group:nth-child(11) { grid-row: 4; grid-column: 4 / span 2; }
+.filters > .filter-group:nth-child(6) { grid-row: 2; grid-column: 2; justify-self: start; }
+.filters > .filter-group:nth-child(7) { grid-row: 2; grid-column: 4; justify-self: start; }
+.filters > .filter-pair { grid-row: 2; grid-column: 3; display: flex; gap: 14px; }
+.filters > .filter-group:nth-child(9) { grid-row: 3; grid-column: 1 / span 3; }
+.filters > .filter-group:nth-child(10) { grid-row: 2; grid-column: 5; }
 
 .filter-group { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
 .filter-group label { color: var(--grijs); font-weight: 600; }
