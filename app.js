@@ -20,7 +20,7 @@ const LANDEN = [
   ['FI', 'Finland'], ['GR', 'Griekenland'],
   ];
 
-// ---------- data helpers ----------
+const LANDVLAG = { NL:'🇳🇱', BE:'🇧🇪', DE:'🇩🇪', FR:'🇫🇷', LU:'🇱🇺', GB:'🇬🇧', IE:'🇮🇪', ES:'🇪🇸', PT:'🇵🇹', IT:'🇮🇹', AT:'🇦🇹', CH:'🇨🇭', PL:'🇵🇱', CZ:'🇨🇿', SK:'🇸🇰', HU:'🇭🇺', RO:'🇷🇴', BG:'🇧🇬', SI:'🇸🇮', HR:'🇭🇷', DK:'🇩🇰', SE:'🇸🇪', NO:'🇳🇴', FI:'🇫🇮', GR:'🇬🇷' }; function landNaam(code) { const f = LANDEN.find(x => x[0] === code); return f ? f[1] : code; } // ---------- data helpers ----------
 function loadOffers() {
   try {
     return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
@@ -80,8 +80,8 @@ function layout(title, body) {
 }
 
 function locatie(land, postcode, plaats) {
-  const parts = [land, postcode].filter(Boolean).join('-');
-  return [parts, plaats].filter(Boolean).join(' ') || '-';
+  const landWeergave = land ? ((LANDVLAG[land] || '') + ' ' + landNaam(land)).trim() : ''; const rest = [postcode, plaats].filter(Boolean).join(' ');
+  return [landWeergave, rest].filter(Boolean).join(', ') || '-';
 }
 
 // ---------- routes ----------
