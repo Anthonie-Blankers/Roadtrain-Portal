@@ -20,7 +20,7 @@ const LANDEN = [
   ['FI', 'Finland'], ['GR', 'Griekenland'],
   ];
 
-const LANDVLAG = { NL:'🇳🇱', BE:'🇧🇪', DE:'🇩🇪', FR:'🇫🇷', LU:'🇱🇺', GB:'🇬🇧', IE:'🇮🇪', ES:'🇪🇸', PT:'🇵🇹', IT:'🇮🇹', AT:'🇦🇹', CH:'🇨🇭', PL:'🇵🇱', CZ:'🇨🇿', SK:'🇸🇰', HU:'🇭🇺', RO:'🇷🇴', BG:'🇧🇬', SI:'🇸🇮', HR:'🇭🇷', DK:'🇩🇰', SE:'🇸🇪', NO:'🇳🇴', FI:'🇫🇮', GR:'🇬🇷' }; function landNaam(code) { const f = LANDEN.find(x => x[0] === code); return f ? f[1] : code; } // ---------- data helpers ----------
+function landNaam(code) { const f = LANDEN.find(x => x[0] === code); return f ? f[1] : code; } // ---------- data helpers ----------
 function loadOffers() {
   try {
     return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
@@ -57,7 +57,7 @@ function layout(title, body) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${esc(title)}</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
   </head>
   <body>
   <header class="topbar">
@@ -80,7 +80,7 @@ function layout(title, body) {
 }
 
 function locatie(land, postcode, plaats) {
-  const landWeergave = land ? ((LANDVLAG[land] || '') + ' ' + landNaam(land)).trim() : ''; const rest = [postcode, plaats].filter(Boolean).join(' ');
+  const bekend = LANDEN.some(x => x[0] === land); const landWeergave = land ? (bekend ? '<span class="fi fi-' + land.toLowerCase() + '"></span> ' + esc(landNaam(land)) : esc(land)) : ''; const rest = [esc(postcode), esc(plaats)].filter(Boolean).join(' ');
   return [landWeergave, rest].filter(Boolean).join(', ') || '-';
 }
 
@@ -149,7 +149,7 @@ app.get('/', (req, res) => {
         const rows = filtered.map(o => `
         <tr class="${o.status === 'vervuld' ? 'vervuld' : ''}">
         <td><span class="badge badge-${o.type}">${o.type === 'vracht' ? 'Vracht' : 'Combi vrij'}</span></td>
-        <td><span class="route-part">${esc(locatie(o.van_land, o.van_postcode, o.van_plaats))}</span> &rarr; <span class="route-part">${esc(locatie(o.naar_land, o.naar_postcode, o.naar_plaats))}</span></td>
+        <td><span class="route-part">${locatie(o.van_land, o.van_postcode, o.van_plaats)}</span> &rarr; <span class="route-part">${locatie(o.naar_land, o.naar_postcode, o.naar_plaats)}</span></td>
         <td>${periode(o.laaddatum_van, o.laaddatum_tot)}</td>
         <td>${periode(o.losdatum_van, o.losdatum_tot)}</td>
         <td>${esc(o.laadmeter)} lm</td>
