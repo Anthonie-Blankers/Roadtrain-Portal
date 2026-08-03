@@ -1,12 +1,13 @@
 {
-  "name": "combi-beurs",
-  "version": "1.0.0",
-  "description": "Eenvoudige vrachtenbeurs voor combi's (14-15,6 laadmeter, 2,6-3,05m hoogte)",
-  "main": "app.js",
-  "scripts": {
-    "start": "node app.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2"
-  }
+    "name": "combi-beurs",
+    "version": "1.0.0",
+    "description": "Eenvoudige vrachtenbeurs voor combi's (14-15,6 laadmeter, 2,6-3,05m hoogte)",
+    "main": "app.js",
+    "scripts": {
+          "start": "node app.js"
+    },
+    "dependencies": {
+          "express": "^4.19.2",
+          "pg": "^8.11.3"
+    }
 }
