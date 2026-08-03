@@ -49,6 +49,12 @@ body {
         display: block;
 }
 
+.logo-img-wordmark {
+          height: 30px;
+          width: auto;
+          display: block;
+}
+
 .topbar nav a {
         color: white;
         text-decoration: none;
