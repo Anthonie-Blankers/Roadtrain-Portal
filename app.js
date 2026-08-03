@@ -5,173 +5,293 @@ const crypto = require('crypto');
 
 const app = express();
 const DATA_FILE = path.join(__dirname, 'data', 'offers.json');
+const COMPANIES_FILE = path.join(__dirname, 'data', 'companies.json');
 const PORT = process.env.PORT || 3000;
+const SESSIE_GEHEIM = process.env.SESSIE_GEHEIM || 'dev-geheim-verander-mij';
+const ADMIN_WACHTWOORD = process.env.ADMIN_WACHTWOORD || 'wijzig-mij';
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const LANDEN = [
-      ['NL', 'Nederland'], ['BE', 'Belgie'], ['DE', 'Duitsland'], ['FR', 'Frankrijk'],
-      ['LU', 'Luxemburg'], ['GB', 'Verenigd Koninkrijk'], ['IE', 'Ierland'],
-      ['ES', 'Spanje'], ['PT', 'Portugal'], ['IT', 'Italie'], ['AT', 'Oostenrijk'],
-      ['CH', 'Zwitserland'], ['PL', 'Polen'], ['CZ', 'Tsjechie'], ['SK', 'Slowakije'],
-      ['HU', 'Hongarije'], ['RO', 'Roemenie'], ['BG', 'Bulgarije'], ['SI', 'Slovenie'],
-      ['HR', 'Kroatie'], ['DK', 'Denemarken'], ['SE', 'Zweden'], ['NO', 'Noorwegen'],
-      ['FI', 'Finland'], ['GR', 'Griekenland'],
-    ];
+        ['NL', 'Nederland'], ['BE', 'Belgie'], ['DE', 'Duitsland'], ['FR', 'Frankrijk'],
+        ['LU', 'Luxemburg'], ['GB', 'Verenigd Koninkrijk'], ['IE', 'Ierland'],
+        ['ES', 'Spanje'], ['PT', 'Portugal'], ['IT', 'Italie'], ['AT', 'Oostenrijk'],
+        ['CH', 'Zwitserland'], ['PL', 'Polen'], ['CZ', 'Tsjechie'], ['SK', 'Slowakije'],
+        ['HU', 'Hongarije'], ['RO', 'Roemenie'], ['BG', 'Bulgarije'], ['SI', 'Slovenie'],
+        ['HR', 'Kroatie'], ['DK', 'Denemarken'], ['SE', 'Zweden'], ['NO', 'Noorwegen'],
+        ['FI', 'Finland'], ['GR', 'Griekenland'],
+      ];
 
 function landNaam(code) { const f = LANDEN.find(x => x[0] === code); return f ? f[1] : code; }
 
-// ---------- data helpers ----------
+// ---------- data helpers: aanbiedingen ----------
 function loadOffers() {
-      try {
-              return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-      } catch (e) {
-              return [];
-      }
+        try {
+                  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+        } catch (e) {
+                  return [];
+        }
 }
 
 function saveOffers(offers) {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(offers, null, 2));
+        fs.writeFileSync(DATA_FILE, JSON.stringify(offers, null, 2));
+}
+
+// ---------- data helpers: bedrijven / toegangscodes ----------
+function loadCompanies() {
+        try {
+                  return JSON.parse(fs.readFileSync(COMPANIES_FILE, 'utf8'));
+        } catch (e) {
+                  return [];
+        }
+}
+
+function saveCompanies(companies) {
+        fs.writeFileSync(COMPANIES_FILE, JSON.stringify(companies, null, 2));
+}
+
+function genCode(lengte = 6) {
+        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // zonder verwarrende tekens (O/0, I/1/L)
+  let code = '';
+        for (let i = 0; i < lengte; i++) {
+                  code += chars[crypto.randomInt(chars.length)];
+        }
+        return code;
+}
+
+// ---------- sessies (ondertekende cookies, geen extra dependencies) ----------
+function sign(waarde) {
+        return crypto.createHmac('sha256', SESSIE_GEHEIM).update(waarde).digest('hex');
+}
+
+function parseCookies(req) {
+        const header = req.headers.cookie || '';
+        const out = {};
+        header.split(';').forEach(deel => {
+                  const idx = deel.indexOf('=');
+                  if (idx === -1) return;
+                  const k = deel.slice(0, idx).trim();
+                  const v = deel.slice(idx + 1).trim();
+                  if (k) out[k] = decodeURIComponent(v);
+        });
+        return out;
+}
+
+function getIngelogdBedrijf(req) {
+        const cookies = parseCookies(req);
+        const raw = cookies.sessie;
+        if (!raw) return null;
+        const idx = raw.lastIndexOf('.');
+        if (idx === -1) return null;
+        const bedrijfId = raw.slice(0, idx);
+        const sig = raw.slice(idx + 1);
+        if (sign(bedrijfId) !== sig) return null;
+        const companies = loadCompanies();
+        return companies.find(c => c.id === bedrijfId && c.actief) || null;
+}
+
+function isAdminIngelogd(req) {
+        const cookies = parseCookies(req);
+        return cookies.admin_sessie === sign('admin-sessie-marker');
+}
+
+function requireLogin(req, res, next) {
+        const bedrijf = getIngelogdBedrijf(req);
+        if (!bedrijf) {
+                  return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+        }
+        req.bedrijf = bedrijf;
+        next();
+}
+
+function requireAdmin(req, res, next) {
+        if (!isAdminIngelogd(req)) {
+                  return res.redirect(`/admin/login?next=${encodeURIComponent(req.originalUrl)}`);
+        }
+        next();
 }
 
 function esc(str = '') {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
 }
 
 function landOptions(selected, metAlle) {
-      let opts = metAlle ? `<option value="alle" ${selected === 'alle' ? 'selected' : ''}>Alle landen</option>` : '';
-      opts += LANDEN.map(([code, naam]) =>
-              `<option value="${code}" ${selected === code ? 'selected' : ''}>${code} - ${naam}</option>`
-                           ).join('');
-      return opts;
+        let opts = metAlle ? `<option value="alle" ${selected === 'alle' ? 'selected' : ''}>Alle landen</option>` : '';
+        opts += LANDEN.map(([code, naam]) =>
+                  `<option value="${code}" ${selected === code ? 'selected' : ''}>${code} - ${naam}</option>`
+                             ).join('');
+        return opts;
 }
 
 // ---------- layout ----------
-function layout(title, body, opts = {}) {
-      return `<!DOCTYPE html>
-      <html lang="nl">
-      <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${esc(title)}</title>
-      <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
-      </head>
-      <body>
-      <header class="topbar">
-        <div class="wrap">
-                <a href="/" class="logo"><img src="/logo-header-final.png" alt="CombiMatch — The Roadtrain Exchange" class="logo-img-wordmark"></a>
-                <nav>
-                      <a href="/">Home</a>
-                            <a href="/overzicht">Overzicht</a>
-                                  <a href="/nieuw/vracht">Vracht aanbieden</a>
-                                        <a href="/nieuw/capaciteit">Capaciteit aanbieden</a>
-                                            </nav>
-                                              </div>
-                                              </header>
-                                              <main class="wrap${opts.wideMain ? ' main-wide' : ''}">
-                                              ${body}
-                                              </main>
-                                              <footer class="wrap footer">
-                                                <p>CombiMatch &ndash; The Roadtrain Exchange verbindt vervoerders met (volume)combi's van alle types. Via &eacute;&eacute;n platform deel je eenvoudig beschikbare capaciteit, vind je passende vrachten en werk je samen met betrouwbare transportpartners. Zo verhogen we samen de beladingsgraad, beperken we lege kilometers en maken we transport slimmer, duurzamer en rendabeler.</p>
-                                                </footer>
-                                                </body>
-                                                </html>`;
+function layout(req, title, body, opts = {}) {
+        const bedrijf = req ? getIngelogdBedrijf(req) : null;
+        return `<!DOCTYPE html>
+        <html lang="nl">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${esc(title)}</title>
+        <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
+        </head>
+        <body>
+        <header class="topbar">
+          <div class="wrap">
+              <a href="/" class="logo"><img src="/logo-header-final.png" alt="CombiMatch — The Roadtrain Exchange" class="logo-img-wordmark"></a>
+                  <nav>
+                        <a href="/">Home</a>
+                              <a href="/overzicht">Overzicht</a>
+                                    <a href="/nieuw/vracht">Vracht aanbieden</a>
+                                          <a href="/nieuw/capaciteit">Capaciteit aanbieden</a>
+                                                ${bedrijf ? `<a href="/uitloggen">Uitloggen (${esc(bedrijf.naam)})</a>` : `<a href="/login">Inloggen</a>`}
+                                                    </nav>
+                                                      </div>
+                                                      </header>
+                                                      <main class="wrap${opts.wideMain ? ' main-wide' : ''}">
+                                                      ${body}
+                                                      </main>
+                                                      <footer class="wrap footer">
+                                                        <p>CombiMatch &ndash; The Roadtrain Exchange verbindt vervoerders met (volume)combi's van alle types. Via &eacute;&eacute;n platform deel je eenvoudig beschikbare capaciteit, vind je passende vrachten en werk je samen met betrouwbare transportpartners. Zo verhogen we samen de beladingsgraad, beperken we lege kilometers en maken we transport slimmer, duurzamer en rendabeler.</p>
+                                                          <p style="margin-top:8px;"><a href="/admin/login" style="color:var(--grijs);font-size:0.75rem;">Beheer</a></p>
+                                                          </footer>
+                                                          </body>
+                                                          </html>`;
 }
 
 function locatie(land, postcode, plaats) {
-      const bekend = LANDEN.some(x => x[0] === land);
-      const landWeergave = land ? (bekend ? '<span class="fi fi-' + land.toLowerCase() + '"></span> ' + esc(landNaam(land)) : esc(land)) : '';
-      const rest = [esc(postcode), esc(plaats)].filter(Boolean).join(' ');
-      return [landWeergave, rest].filter(Boolean).join(', ') || '-';
+        const bekend = LANDEN.some(x => x[0] === land);
+        const landWeergave = land ? (bekend ? '<span class="fi fi-' + land.toLowerCase() + '"></span> ' + esc(landNaam(land)) : esc(land)) : '';
+        const rest = [esc(postcode), esc(plaats)].filter(Boolean).join(' ');
+        return [landWeergave, rest].filter(Boolean).join(', ') || '-';
 }
 
 // ---------- routes ----------
 
-// homepage
+// homepage (publiek toegankelijk)
 app.get('/', (req, res) => {
-      const body = `
-        <div class="hero">
-            <img src="/logo-hero.png" alt="CombiMatch - The Roadtrain Exchange" class="hero-logo">
-                <p class="hero-tagline">E&eacute;n platform waar vervoerders die met combi's rijden vrachten en beschikbare laadcapaciteit met elkaar delen &mdash; minder lege kilometers, een hogere beladingsgraad.</p>
-                    <div class="hero-actions">
-                          <a href="/nieuw/vracht" class="btn-hero btn-hero-vracht">
-                                  <span class="btn-hero-title">Vracht aanbieden</span>
-                                          <span class="btn-hero-sub">Ik zoek een combi voor mijn lading</span>
-                                                </a>
-                                                      <a href="/nieuw/capaciteit" class="btn-hero btn-hero-capaciteit">
-                                                              <span class="btn-hero-title">Capaciteit aanbieden</span>
-                                                                      <span class="btn-hero-sub">Ik heb een combi vrij</span>
-                                                                            </a>
-                                                                                </div>
-                                                                                    <p class="hero-link"><a href="/overzicht">Bekijk alle openstaande aanbiedingen &rarr;</a></p>
-                                                                                      </div>
-                                                                                        `;
-      res.send(layout('CombiMatch — The Roadtrain Exchange', body));
+        const body = `
+          <div class="hero">
+              <img src="/logo-hero.png" alt="CombiMatch - The Roadtrain Exchange" class="hero-logo">
+                  <p class="hero-tagline">E&eacute;n platform waar vervoerders die met combi's rijden vrachten en beschikbare laadcapaciteit met elkaar delen &mdash; minder lege kilometers, een hogere beladingsgraad.</p>
+                      <div class="hero-actions">
+                            <a href="/nieuw/vracht" class="btn-hero btn-hero-vracht">
+                                    <span class="btn-hero-title">Vracht aanbieden</span>
+                                            <span class="btn-hero-sub">Ik zoek een combi voor mijn lading</span>
+                                                  </a>
+                                                        <a href="/nieuw/capaciteit" class="btn-hero btn-hero-capaciteit">
+                                                                <span class="btn-hero-title">Capaciteit aanbieden</span>
+                                                                        <span class="btn-hero-sub">Ik heb een combi vrij</span>
+                                                                              </a>
+                                                                                  </div>
+                                                                                      <p class="hero-link"><a href="/overzicht">Bekijk alle openstaande aanbiedingen &rarr;</a></p>
+                                                                                        </div>
+                                                                                          `;
+        res.send(layout(req, 'CombiMatch — The Roadtrain Exchange', body));
 });
 
-// overview + filters
-app.get('/overzicht', (req, res) => {
-      const offers = loadOffers().sort((a, b) => new Date(b.geplaatst_op) - new Date(a.geplaatst_op));
+// ---------- inloggen (bedrijven) ----------
+app.get('/login', (req, res) => {
+        const next = req.query.next || '/overzicht';
+        const fout = req.query.fout === '1';
+        const body = `
+          <h1>Inloggen</h1>
+            <p class="form-intro">Voer de toegangscode van je bedrijf in om aanbiedingen te bekijken en te plaatsen. Geen code? Neem contact op met CombiMatch.</p>
+              ${fout ? '<p style="color:#b00020;font-weight:600;">Deze toegangscode is niet geldig. Probeer het opnieuw.</p>' : ''}
+                <form class="offer-form" method="post" action="/login">
+                    <input type="hidden" name="next" value="${esc(next)}">
+                        <div class="form-row">
+                              <label>Toegangscode</label>
+                                    <input type="text" name="code" required autofocus placeholder="bijv. AB3D9K" style="text-transform:uppercase;letter-spacing:0.1em;">
+                                        </div>
+                                            <div class="form-row">
+                                                  <button type="submit">Inloggen</button>
+                                                      </div>
+                                                        </form>
+                                                          `;
+        res.send(layout(req, 'Combi-Match — Inloggen', body));
+});
+
+app.post('/login', (req, res) => {
+        const code = (req.body.code || '').trim().toUpperCase();
+        const next = req.body.next || '/overzicht';
+        const companies = loadCompanies();
+        const bedrijf = companies.find(c => c.actief && c.code.toUpperCase() === code);
+        if (!bedrijf) {
+                  return res.redirect(`/login?fout=1&next=${encodeURIComponent(next)}`);
+        }
+        const waarde = `${bedrijf.id}.${sign(bedrijf.id)}`;
+        res.cookie('sessie', waarde, { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 90, sameSite: 'lax' });
+        res.redirect(next);
+});
+
+app.get('/uitloggen', (req, res) => {
+        res.clearCookie('sessie');
+        res.redirect('/');
+});
+
+// overview + filters (login vereist)
+app.get('/overzicht', requireLogin, (req, res) => {
+        const offers = loadOffers().sort((a, b) => new Date(b.geplaatst_op) - new Date(a.geplaatst_op));
 
           const q = req.query;
-      const type = q.type || 'alle';
-      const vanLand = q.van_land || 'alle';
-      const naarLand = q.naar_land || 'alle';
-      const vanPcs = [q.van_pc1, q.van_pc2, q.van_pc3].map(v => (v || '').trim().toLowerCase()).filter(Boolean);
-      const naarPcs = [q.naar_pc1, q.naar_pc2, q.naar_pc3].map(v => (v || '').trim().toLowerCase()).filter(Boolean);
-      const laadVanaf = q.laad_vanaf || '';
-      const laadTot = q.laad_tot || '';
-      const losVanaf = q.los_vanaf || '';
-      const losTot = q.los_tot || '';
-      const lmMin = q.lm_min !== undefined && q.lm_min !== '' ? parseFloat(q.lm_min) : 13.65;
-      const lmMax = q.lm_max !== undefined && q.lm_max !== '' ? parseFloat(q.lm_max) : 16.0;
-      const hMin = q.h_min !== undefined && q.h_min !== '' ? parseFloat(q.h_min) : 0.1;
-      const hMax = q.h_max !== undefined && q.h_max !== '' ? parseFloat(q.h_max) : 3.10;
-      const toonAfgehandeld = q.toon_afgehandeld === '1';
+        const type = q.type || 'alle';
+        const vanLand = q.van_land || 'alle';
+        const naarLand = q.naar_land || 'alle';
+        const vanPcs = [q.van_pc1, q.van_pc2, q.van_pc3].map(v => (v || '').trim().toLowerCase()).filter(Boolean);
+        const naarPcs = [q.naar_pc1, q.naar_pc2, q.naar_pc3].map(v => (v || '').trim().toLowerCase()).filter(Boolean);
+        const laadVanaf = q.laad_vanaf || '';
+        const laadTot = q.laad_tot || '';
+        const losVanaf = q.los_vanaf || '';
+        const losTot = q.los_tot || '';
+        const lmMin = q.lm_min !== undefined && q.lm_min !== '' ? parseFloat(q.lm_min) : 13.65;
+        const lmMax = q.lm_max !== undefined && q.lm_max !== '' ? parseFloat(q.lm_max) : 16.0;
+        const hMin = q.h_min !== undefined && q.h_min !== '' ? parseFloat(q.h_min) : 0.1;
+        const hMax = q.h_max !== undefined && q.h_max !== '' ? parseFloat(q.h_max) : 3.10;
+        const toonAfgehandeld = q.toon_afgehandeld === '1';
 
           function overlapt(startO, eindO, filterVanaf, filterTot) {
-                  if (!filterVanaf && !filterTot) return true;
-                  const vanaf = filterVanaf || '0000-01-01';
-                  const tot = filterTot || '9999-12-31';
-                  const oVan = startO || '0000-01-01';
-                  const oTot = eindO || oVan;
-                  return oVan <= tot && vanaf <= oTot;
+                    if (!filterVanaf && !filterTot) return true;
+                    const vanaf = filterVanaf || '0000-01-01';
+                    const tot = filterTot || '9999-12-31';
+                    const oVan = startO || '0000-01-01';
+                    const oTot = eindO || oVan;
+                    return oVan <= tot && vanaf <= oTot;
           }
 
           function matchLocatie(land, postcode, filterLand, pcPrefixes) {
-                  if (filterLand && filterLand !== 'alle' && land !== filterLand) return false;
-                  if (pcPrefixes.length) {
-                            const pc = (postcode || '').toLowerCase();
-                            if (!pcPrefixes.some(p => pc.startsWith(p))) return false;
-                  }
-                  return true;
+                    if (filterLand && filterLand !== 'alle' && land !== filterLand) return false;
+                    if (pcPrefixes.length) {
+                                const pc = (postcode || '').toLowerCase();
+                                if (!pcPrefixes.some(p => pc.startsWith(p))) return false;
+                    }
+                    return true;
           }
 
           const filtered = offers.filter(o => {
-                  if (!toonAfgehandeld && o.status === 'vervuld') return false;
-                  if (type !== 'alle' && o.type !== type) return false;
-                  if (!matchLocatie(o.van_land, o.van_postcode, vanLand, vanPcs)) return false;
-                  if (!matchLocatie(o.naar_land, o.naar_postcode, naarLand, naarPcs)) return false;
-                  if (!overlapt(o.laaddatum_van, o.laaddatum_tot, laadVanaf, laadTot)) return false;
-                  if (!overlapt(o.losdatum_van, o.losdatum_tot, losVanaf, losTot)) return false;
-                  const lm = parseFloat(o.laadmeter);
-                  if (!isNaN(lm) && (lm < lmMin || lm > lmMax)) return false;
-                  const h = parseFloat(o.hoogte);
-                  if (!isNaN(h) && (h < hMin || h > hMax)) return false;
-                  return true;
+                    if (!toonAfgehandeld && o.status === 'vervuld') return false;
+                    if (type !== 'alle' && o.type !== type) return false;
+                    if (!matchLocatie(o.van_land, o.van_postcode, vanLand, vanPcs)) return false;
+                    if (!matchLocatie(o.naar_land, o.naar_postcode, naarLand, naarPcs)) return false;
+                    if (!overlapt(o.laaddatum_van, o.laaddatum_tot, laadVanaf, laadTot)) return false;
+                    if (!overlapt(o.losdatum_van, o.losdatum_tot, losVanaf, losTot)) return false;
+                    const lm = parseFloat(o.laadmeter);
+                    if (!isNaN(lm) && (lm < lmMin || lm > lmMax)) return false;
+                    const h = parseFloat(o.hoogte);
+                    if (!isNaN(h) && (h < hMin || h > hMax)) return false;
+                    return true;
           });
 
           filtered.sort((a, b) => new Date(a.laaddatum_van) - new Date(b.laaddatum_van));
 
           function periode(van_, tot_) {
-                  if (!van_) return '-';
-                  if (!tot_ || tot_ === van_) return esc(van_);
-                  return `${esc(van_)}<br>&ndash; ${esc(tot_)}`;
+                    if (!van_) return '-';
+                    if (!tot_ || tot_ === van_) return esc(van_);
+                    return `${esc(van_)}<br>&ndash; ${esc(tot_)}`;
           }
 
           const rows = filtered.map(o => `
@@ -278,32 +398,32 @@ app.get('/overzicht', (req, res) => {
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               </table>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 `;
 
-          res.send(layout('Combi-Match — Overzicht', body));
+          res.send(layout(req, 'Combi-Match — Overzicht', body));
 });
 
 // ---------- nieuwe aanbieding: gedeelde formulier-renderer ----------
 function nieuwFormBody(modus) {
-      const isCapaciteit = modus === 'capaciteit';
-      const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
-      const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
-      const intro = isCapaciteit
-        ? 'Heb je een combi (deels) vrij? Geef door welke ruimte je te bieden hebt, dan kunnen andere bedrijven daarop reageren.'
-              : 'Zoek je een combi voor jouw lading? Vul de gegevens van je vracht in, dan kunnen vervoerders met vrije capaciteit reageren.';
+        const isCapaciteit = modus === 'capaciteit';
+        const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
+        const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
+        const intro = isCapaciteit
+          ? 'Heb je een combi (deels) vrij? Geef door welke ruimte je te bieden hebt, dan kunnen andere bedrijven daarop reageren.'
+                  : 'Zoek je een combi voor jouw lading? Vul de gegevens van je vracht in, dan kunnen vervoerders met vrije capaciteit reageren.';
 
   const gewichtLabel = isCapaciteit
-        ? 'Gewicht (ton) &mdash; hoeveel gewicht kan er geladen worden?'
-          : 'Gewicht (ton, optioneel)';
-      const laadmeterLabel = isCapaciteit
-        ? 'Laadmeter &mdash; hoe lang is de totale combi?'
-              : 'Laadmeter';
-      const hoogteLabel = isCapaciteit
-        ? 'Hoogte (m) &mdash; wat is de binnenhoogte?'
-              : 'Hoogte (m) &mdash; wat is de hoogte van de lading?';
-      const ladingLabel = isCapaciteit
-        ? 'Lengte motorwagen / aanhanger &mdash; hoe lang zijn de motorwagen en aanhanger?'
-              : 'Type lading';
-      const ladingPlaceholder = isCapaciteit ? 'bijv. 7,20m / 8,30m' : 'bijv. blokpallets';
-      const opmerkingPlaceholder = isCapaciteit ? 'bijv. beschikbaar vanaf 14:00' : 'bijv. geen stapelen';
+          ? 'Gewicht (ton) &mdash; hoeveel gewicht kan er geladen worden?'
+            : 'Gewicht (ton, optioneel)';
+        const laadmeterLabel = isCapaciteit
+          ? 'Laadmeter &mdash; hoe lang is de totale combi?'
+                  : 'Laadmeter';
+        const hoogteLabel = isCapaciteit
+          ? 'Hoogte (m) &mdash; wat is de binnenhoogte?'
+                  : 'Hoogte (m) &mdash; wat is de hoogte van de lading?';
+        const ladingLabel = isCapaciteit
+          ? 'Lengte motorwagen / aanhanger &mdash; hoe lang zijn de motorwagen en aanhanger?'
+                  : 'Type lading';
+        const ladingPlaceholder = isCapaciteit ? 'bijv. 7,20m / 8,30m' : 'bijv. blokpallets';
+        const opmerkingPlaceholder = isCapaciteit ? 'bijv. beschikbaar vanaf 14:00' : 'bijv. geen stapelen';
 
   return `
     <h1>${titel}</h1>
@@ -409,67 +529,67 @@ function nieuwFormBody(modus) {
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           `;
 }
 
-app.get('/nieuw/vracht', (req, res) => {
-      res.send(layout('Combi-Match — Vracht aanbieden', nieuwFormBody('vracht')));
+app.get('/nieuw/vracht', requireLogin, (req, res) => {
+        res.send(layout(req, 'Combi-Match — Vracht aanbieden', nieuwFormBody('vracht')));
 });
 
-app.get('/nieuw/capaciteit', (req, res) => {
-      res.send(layout('Combi-Match — Capaciteit aanbieden', nieuwFormBody('capaciteit')));
+app.get('/nieuw/capaciteit', requireLogin, (req, res) => {
+        res.send(layout(req, 'Combi-Match — Capaciteit aanbieden', nieuwFormBody('capaciteit')));
 });
 
 // oude link blijft werken
-app.get('/nieuw', (req, res) => res.redirect('/nieuw/vracht'));
+app.get('/nieuw', requireLogin, (req, res) => res.redirect('/nieuw/vracht'));
 
 // create offer
-app.post('/nieuw', (req, res) => {
-      const offers = loadOffers();
-      const id = crypto.randomUUID();
+app.post('/nieuw', requireLogin, (req, res) => {
+        const offers = loadOffers();
+        const id = crypto.randomUUID();
 
            const laaddatumVan = req.body.laaddatum_van || '';
-      const losdatumVan = req.body.losdatum_van || '';
+        const losdatumVan = req.body.losdatum_van || '';
 
            const offer = {
-                   id,
-                   type: req.body.type === 'ruimte' ? 'ruimte' : 'vracht',
-                   van_land: req.body.van_land || '',
-                   van_postcode: req.body.van_postcode || '',
-                   van_plaats: req.body.van_plaats || '',
-                   naar_land: req.body.naar_land || '',
-                   naar_postcode: req.body.naar_postcode || '',
-                   naar_plaats: req.body.naar_plaats || '',
-                   laaddatum_van: laaddatumVan,
-                   laaddatum_tot: req.body.laaddatum_tot || laaddatumVan,
-                   losdatum_van: losdatumVan,
-                   losdatum_tot: req.body.losdatum_tot || losdatumVan,
-                   laadmeter: req.body.laadmeter || '',
-                   hoogte: req.body.hoogte || '',
-                   gewicht: req.body.gewicht || '',
-                   type_lading: req.body.type_lading || '',
-                   opmerking: req.body.opmerking || '',
-                   bedrijf: req.body.bedrijf || '',
-                   contactpersoon: req.body.contactpersoon || '',
-                   telefoon: req.body.telefoon || '',
-                   email: req.body.email || '',
-                   status: 'open',
-                   geplaatst_op: new Date().toISOString(),
+                     id,
+                     type: req.body.type === 'ruimte' ? 'ruimte' : 'vracht',
+                     van_land: req.body.van_land || '',
+                     van_postcode: req.body.van_postcode || '',
+                     van_plaats: req.body.van_plaats || '',
+                     naar_land: req.body.naar_land || '',
+                     naar_postcode: req.body.naar_postcode || '',
+                     naar_plaats: req.body.naar_plaats || '',
+                     laaddatum_van: laaddatumVan,
+                     laaddatum_tot: req.body.laaddatum_tot || laaddatumVan,
+                     losdatum_van: losdatumVan,
+                     losdatum_tot: req.body.losdatum_tot || losdatumVan,
+                     laadmeter: req.body.laadmeter || '',
+                     hoogte: req.body.hoogte || '',
+                     gewicht: req.body.gewicht || '',
+                     type_lading: req.body.type_lading || '',
+                     opmerking: req.body.opmerking || '',
+                     bedrijf: req.body.bedrijf || '',
+                     contactpersoon: req.body.contactpersoon || '',
+                     telefoon: req.body.telefoon || '',
+                     email: req.body.email || '',
+                     status: 'open',
+                     geplaatst_op: new Date().toISOString(),
            };
 
            offers.push(offer);
-      saveOffers(offers);
+        saveOffers(offers);
 
            const body = `
                <h1>Aanbieding geplaatst</h1>
                    <p>Je aanbieding staat nu in het overzicht.</p>
                        <p><a href="/overzicht">Naar het overzicht</a> &middot; <a href="/">Terug naar home</a></p>
                          `;
-      res.send(layout('Combi-Match — Geplaatst', body));
+        res.send(layout(req, 'Combi-Match — Geplaatst', body));
 });
 
 // manage single offer (mark done / delete)
-app.get('/aanbieding/:id', (req, res) => {
-      const offers = loadOffers();
-      const offer = offers.find(o => o.id === req.params.id);
-      if (!offer) return res.status(404).send(layout('Niet gevonden', '<p>Aanbieding niet gevonden.</p>'));
+app.get('/aanbieding/:id', requireLogin, (req, res) => {
+        const offers = loadOffers();
+        const offer = offers.find(o => o.id === req.params.id);
+        if (!offer) return res.status(404).send(layout(req, 'Niet gevonden', '<p>Aanbieding niet gevonden.</p>'));
 
           const opgeslagen = req.query.opgeslagen === '1';
 
@@ -585,57 +705,172 @@ app.get('/aanbieding/:id', (req, res) => {
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           <button type="submit" name="actie" value="verwijderen" onclick="return confirm('Weet je zeker dat je deze aanbieding wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')">Verwijderen</button>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               </form>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 `;
-      res.send(layout('Combi-Match — Bewerken', body));
+        res.send(layout(req, 'Combi-Match — Bewerken', body));
 });
 
-app.post('/aanbieding/:id/bewerken', (req, res) => {
-      const offers = loadOffers();
-      const offer = offers.find(o => o.id === req.params.id);
-      if (!offer) return res.status(404).send(layout('Niet gevonden', '<p>Aanbieding niet gevonden. <a href="/overzicht">Terug</a></p>'));
+app.post('/aanbieding/:id/bewerken', requireLogin, (req, res) => {
+        const offers = loadOffers();
+        const offer = offers.find(o => o.id === req.params.id);
+        if (!offer) return res.status(404).send(layout(req, 'Niet gevonden', '<p>Aanbieding niet gevonden. <a href="/overzicht">Terug</a></p>'));
 
            const laaddatumVan = req.body.laaddatum_van || offer.laaddatum_van;
-      const losdatumVan = req.body.losdatum_van || offer.losdatum_van;
+        const losdatumVan = req.body.losdatum_van || offer.losdatum_van;
 
            offer.type = req.body.type === 'ruimte' ? 'ruimte' : 'vracht';
-      offer.van_land = req.body.van_land || '';
-      offer.van_postcode = req.body.van_postcode || '';
-      offer.van_plaats = req.body.van_plaats || '';
-      offer.naar_land = req.body.naar_land || '';
-      offer.naar_postcode = req.body.naar_postcode || '';
-      offer.naar_plaats = req.body.naar_plaats || '';
-      offer.laaddatum_van = laaddatumVan;
-      offer.laaddatum_tot = req.body.laaddatum_tot || laaddatumVan;
-      offer.losdatum_van = losdatumVan;
-      offer.losdatum_tot = req.body.losdatum_tot || losdatumVan;
-      offer.laadmeter = req.body.laadmeter || '';
-      offer.hoogte = req.body.hoogte || '';
-      offer.gewicht = req.body.gewicht || '';
-      offer.type_lading = req.body.type_lading || '';
-      offer.opmerking = req.body.opmerking || '';
-      offer.bedrijf = req.body.bedrijf || '';
-      offer.contactpersoon = req.body.contactpersoon || '';
-      offer.telefoon = req.body.telefoon || '';
-      offer.email = req.body.email || '';
+        offer.van_land = req.body.van_land || '';
+        offer.van_postcode = req.body.van_postcode || '';
+        offer.van_plaats = req.body.van_plaats || '';
+        offer.naar_land = req.body.naar_land || '';
+        offer.naar_postcode = req.body.naar_postcode || '';
+        offer.naar_plaats = req.body.naar_plaats || '';
+        offer.laaddatum_van = laaddatumVan;
+        offer.laaddatum_tot = req.body.laaddatum_tot || laaddatumVan;
+        offer.losdatum_van = losdatumVan;
+        offer.losdatum_tot = req.body.losdatum_tot || losdatumVan;
+        offer.laadmeter = req.body.laadmeter || '';
+        offer.hoogte = req.body.hoogte || '';
+        offer.gewicht = req.body.gewicht || '';
+        offer.type_lading = req.body.type_lading || '';
+        offer.opmerking = req.body.opmerking || '';
+        offer.bedrijf = req.body.bedrijf || '';
+        offer.contactpersoon = req.body.contactpersoon || '';
+        offer.telefoon = req.body.telefoon || '';
+        offer.email = req.body.email || '';
 
            saveOffers(offers);
-      res.redirect(`/aanbieding/${offer.id}?opgeslagen=1`);
+        res.redirect(`/aanbieding/${offer.id}?opgeslagen=1`);
 });
 
-app.post('/aanbieding/:id/status', (req, res) => {
-      let offers = loadOffers();
-      const offer = offers.find(o => o.id === req.params.id);
-      if (!offer) {
-              return res.status(404).send(layout('Niet gevonden', '<p>Aanbieding niet gevonden. <a href="/overzicht">Terug</a></p>'));
-      }
-      if (req.body.actie === 'verwijderen') {
-              offers = offers.filter(o => o.id !== offer.id);
-      } else {
-              offer.status = 'vervuld';
-      }
-      saveOffers(offers);
-      res.redirect('/overzicht');
+app.post('/aanbieding/:id/status', requireLogin, (req, res) => {
+        let offers = loadOffers();
+        const offer = offers.find(o => o.id === req.params.id);
+        if (!offer) {
+                  return res.status(404).send(layout(req, 'Niet gevonden', '<p>Aanbieding niet gevonden. <a href="/overzicht">Terug</a></p>'));
+        }
+        if (req.body.actie === 'verwijderen') {
+                  offers = offers.filter(o => o.id !== offer.id);
+        } else {
+                  offer.status = 'vervuld';
+        }
+        saveOffers(offers);
+        res.redirect('/overzicht');
+});
+
+// ---------- admin: bedrijven / toegangscodes ----------
+app.get('/admin/login', (req, res) => {
+        const next = req.query.next || '/admin';
+        const fout = req.query.fout === '1';
+        const body = `
+          <h1>Beheer &ndash; inloggen</h1>
+            ${fout ? '<p style="color:#b00020;font-weight:600;">Wachtwoord onjuist.</p>' : ''}
+              <form class="offer-form" method="post" action="/admin/login">
+                  <input type="hidden" name="next" value="${esc(next)}">
+                      <div class="form-row">
+                            <label>Beheerderswachtwoord</label>
+                                  <input type="password" name="wachtwoord" required autofocus>
+                                      </div>
+                                          <div class="form-row">
+                                                <button type="submit">Inloggen</button>
+                                                    </div>
+                                                      </form>
+                                                        `;
+        res.send(layout(req, 'Combi-Match — Beheer inloggen', body));
+});
+
+app.post('/admin/login', (req, res) => {
+        const next = req.body.next || '/admin';
+        if ((req.body.wachtwoord || '') !== ADMIN_WACHTWOORD) {
+                  return res.redirect(`/admin/login?fout=1&next=${encodeURIComponent(next)}`);
+        }
+        res.cookie('admin_sessie', sign('admin-sessie-marker'), { httpOnly: true, maxAge: 1000 * 60 * 60 * 12, sameSite: 'lax' });
+        res.redirect(next);
+});
+
+app.get('/admin/uitloggen', (req, res) => {
+        res.clearCookie('admin_sessie');
+        res.redirect('/');
+});
+
+app.get('/admin', requireAdmin, (req, res) => {
+        const companies = loadCompanies().sort((a, b) => new Date(b.aangemaakt_op) - new Date(a.aangemaakt_op));
+        const nieuwId = req.query.nieuw;
+
+          const rows = companies.map(c => `
+              <tr>
+                    <td>${esc(c.naam)}</td>
+                          <td><span class="code">${esc(c.code)}</span>${c.id === nieuwId ? ' <strong style="color:#012750;">(nieuw)</strong>' : ''}</td>
+                                <td>${c.actief ? 'Actief' : 'Ingetrokken'}</td>
+                                      <td>${esc((c.aangemaakt_op || '').slice(0, 10))}</td>
+                                            <td style="white-space:nowrap;">
+                                                    <form method="post" action="/admin/bedrijven/${c.id}/toggle" style="display:inline;">
+                                                              <button type="submit">${c.actief ? 'Intrekken' : 'Heractiveren'}</button>
+                                                                      </form>
+                                                                              <form method="post" action="/admin/bedrijven/${c.id}/verwijderen" style="display:inline;" onsubmit="return confirm('Dit bedrijf en de bijbehorende code definitief verwijderen?')">
+                                                                                        <button type="submit">Verwijderen</button>
+                                                                                                </form>
+                                                                                                      </td>
+                                                                                                          </tr>`).join('');
+
+          const body = `
+            <h1>Beheer &ndash; bedrijven &amp; toegangscodes</h1>
+              <p class="form-intro">Voeg hier bedrijven toe en geef ze de gegenereerde code door. Met die code kunnen ze inloggen op de portal.</p>
+
+                <form class="offer-form" method="post" action="/admin/bedrijven" style="margin-bottom:24px;max-width:480px;">
+                    <div class="form-row">
+                          <label>Nieuw bedrijf &ndash; naam</label>
+                                <input type="text" name="naam" required placeholder="bijv. Jansen Transport BV">
+                                    </div>
+                                        <div class="form-row">
+                                              <button type="submit">Toevoegen &amp; code genereren</button>
+                                                  </div>
+                                                    </form>
+
+                                                      <table class="offers">
+                                                          <thead>
+                                                                <tr><th>Bedrijf</th><th>Code</th><th>Status</th><th>Toegevoegd</th><th></th></tr>
+                                                                    </thead>
+                                                                        <tbody>
+                                                                              ${rows || '<tr><td colspan="5" class="empty">Nog geen bedrijven toegevoegd.</td></tr>'}
+                                                                                  </tbody>
+                                                                                    </table>
+                                                                                      <p style="margin-top:20px;"><a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
+                                                                                        `;
+        res.send(layout(req, 'Combi-Match — Beheer', body));
+});
+
+app.post('/admin/bedrijven', requireAdmin, (req, res) => {
+        const naam = (req.body.naam || '').trim();
+        if (!naam) return res.redirect('/admin');
+        const companies = loadCompanies();
+        const nieuw = {
+                  id: crypto.randomUUID(),
+                  naam,
+                  code: genCode(),
+                  actief: true,
+                  aangemaakt_op: new Date().toISOString(),
+        };
+        companies.push(nieuw);
+        saveCompanies(companies);
+        res.redirect(`/admin?nieuw=${nieuw.id}`);
+});
+
+app.post('/admin/bedrijven/:id/toggle', requireAdmin, (req, res) => {
+        const companies = loadCompanies();
+        const bedrijf = companies.find(c => c.id === req.params.id);
+        if (bedrijf) {
+                  bedrijf.actief = !bedrijf.actief;
+                  saveCompanies(companies);
+        }
+        res.redirect('/admin');
+});
+
+app.post('/admin/bedrijven/:id/verwijderen', requireAdmin, (req, res) => {
+        let companies = loadCompanies();
+        companies = companies.filter(c => c.id !== req.params.id);
+        saveCompanies(companies);
+        res.redirect('/admin');
 });
 
 app.listen(PORT, () => {
-      console.log(`Combi-Match draait op http://localhost:${PORT}`);
+        console.log(`Combi-Match draait op http://localhost:${PORT}`);
 });
