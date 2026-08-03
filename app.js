@@ -64,7 +64,7 @@ function layout(title, body, opts = {}) {
       <body>
       <header class="topbar">
         <div class="wrap">
-            <a href="/" class="logo"><img src="/logo.png" alt="CombiMatch" class="logo-img">Combi-Match</a>
+                <a href="/" class="logo"><img src="/logo-header-final.png" alt="CombiMatch — The Roadtrain Exchange" class="logo-img-wordmark"></a>
                 <nav>
                       <a href="/">Home</a>
                             <a href="/overzicht">Overzicht</a>
