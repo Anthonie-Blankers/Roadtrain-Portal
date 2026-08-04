@@ -954,8 +954,8 @@ app.use((err, req, res, next) => {
   res.status(500).send('Er ging iets mis. Probeer het later opnieuw.');
 });
 
-async function start() {
-  await migreer();
+async function onderhoudAanbiedingen() { await pool.query("UPDATE offers SET status = 'vervuld' WHERE status = 'open' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE"); await pool.query("DELETE FROM offers WHERE status = 'vervuld' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE - INTERVAL '7 days'"); } async function start() {
+  await migreer(); await onderhoudAanbiedingen(); setInterval(onderhoudAanbiedingen, 60 * 60 * 1000);
   app.listen(PORT, () => {
     console.log(`Combi-Match draait op http://localhost:${PORT}`);
   });
