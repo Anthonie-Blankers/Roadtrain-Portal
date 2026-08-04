@@ -257,7 +257,7 @@ app.get('/uitloggen', (req, res) => {
 // overview + filters (login vereist)
 app.get('/overzicht', requireLogin, ah(async (req, res) => {
   const { rows: offers } = await pool.query('SELECT * FROM offers');
-  offers.sort((a, b) => new Date(b.geplaatst_op) - new Date(a.geplaatst_op));
+  offers.sort((a, b) => new Dat(b.geplaatst_op) - new Date(a.geplaatst_op));
 
   const q = req.query;
   const type = q.type || 'alle';
@@ -845,6 +845,8 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
   companies.sort((a, b) => new Date(b.aangemaakt_op) - new Date(a.aangemaakt_op));
   const nieuwId = req.query.nieuw;
 
+  const { rows: weesAanbiedingen } = await pool.query('SELECT * FROM offers WHERE bedrijf_id IS NULL');
+
   const rows = companies.map(c => `
     <tr>
       <td>${esc(c.naam)}</td>
@@ -883,9 +885,36 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
       ${rows || '<tr><td colspan="5" class="empty">Nog geen bedrijven toegevoegd.</td></tr>'}
     </tbody>
   </table>
+
+  ${weesAanbiedingen.length ? `
+  <h2 style="margin-top:32px;">Niet-gekoppelde aanbiedingen (${weesAanbiedingen.length})</h2>
+  <p class="form-intro">Deze aanbiedingen zijn niet gekoppeld aan een bedrijfsaccount (bijv. oude testdata) en zijn daardoor door niemand via de portal te beheren.</p>
+  <table class="offers">
+    <thead>
+      <tr><th>Type</th><th>Route</th><th>Bedrijf (vrije tekst)</th></tr>
+    </thead>
+    <tbody>
+      ${weesAanbiedingen.map(o => `
+      <tr>
+        <td>${esc(o.type)}</td>
+        <td>${esc(o.van_plaats)} &rarr; ${esc(o.naar_plaats)}</td>
+        <td>${esc(o.bedrijf)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  <form method="post" action="/admin/aanbiedingen/opschonen" style="margin-top:12px;" onsubmit="return confirm('Alle niet-gekoppelde aanbiedingen definitief verwijderen?')">
+    <button type="submit">Niet-gekoppelde aanbiedingen verwijderen</button>
+  </form>
+  ` : ''}
+
   <p style="margin-top:20px;"><a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
   `;
   res.send(layout(req, 'Combi-Match - Beheer', body));
+}));
+
+app.post('/admin/aanbiedingen/opschonen', requireAdmin, ah(async (req, res) => {
+  await pool.query('DELETE FROM offers WHERE bedrijf_id IS NULL');
+  res.redirect('/admin');
 }));
 
 function genCode(lengte = 6) {
