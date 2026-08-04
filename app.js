@@ -423,7 +423,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
 }));
 
 // ---------- nieuwe aanbieding: gedeelde formulier-renderer ----------
-function nieuwFormBody(modus) {
+function nieuwFormBody(modus, bedrijfNaam) {
   const isCapaciteit = modus === 'capaciteit';
   const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
   const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
@@ -526,7 +526,7 @@ function nieuwFormBody(modus) {
     <div class="form-row two-col">
       <div>
         <label>Bedrijfsnaam</label>
-        <input type="text" name="bedrijf" required>
+        <input type="text" name="bedrijf" value="${esc(bedrijfNaam)}" readonly>
       </div>
       <div>
         <label>Contactpersoon</label>
@@ -551,11 +551,11 @@ function nieuwFormBody(modus) {
 }
 
 app.get('/nieuw/vracht', requireLogin, (req, res) => {
-  res.send(layout(req, 'Combi-Match - Vracht aanbieden', nieuwFormBody('vracht')));
+  res.send(layout(req, 'Combi-Match - Vracht aanbieden', nieuwFormBody('vracht', req.bedrijf.naam)));
 });
 
 app.get('/nieuw/capaciteit', requireLogin, (req, res) => {
-  res.send(layout(req, 'Combi-Match - Capaciteit aanbieden', nieuwFormBody('capaciteit')));
+  res.send(layout(req, 'Combi-Match - Capaciteit aanbieden', nieuwFormBody('capaciteit', req.bedrijf.naam)));
 });
 
 // oude link blijft werken
