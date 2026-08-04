@@ -325,7 +325,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
       <td>${esc(o.hoogte)} m</td>
       <td>${o.gewicht ? esc(o.gewicht) + ' t' : '-'}</td>
       <td>${o.type_lading ? esc(o.type_lading) : '-'}${o.opmerking ? '<br><small>' + esc(o.opmerking) + '</small>' : ''}</td>
-      <td>${esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; ${esc(o.telefoon)}${o.email ? ' &middot; ' + esc(o.email) : ''}</small></td>
+      <td>${esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; <a href="tel:${esc(o.telefoon)}">${esc(o.telefoon)}</a>${o.email ? ' &middot; <a href="mailto:' + esc(o.email) + '">' + esc(o.email) + '</a>' : ''}</small></td>
       <td>${o.bedrijf_id === req.bedrijf.id ? `<a href="/aanbieding/${o.id}" class="beheer-icon" title="Bewerken"><img src="/icon-dark.png" alt="Bewerken" class="beheer-icon-img"></a>` : (o.email ? `<a href="${esc(mailtoLink(o))}" class="beheer-icon" title="Mail sturen naar ${esc(o.bedrijf)}"><img src="/icon-white.png" alt="Mail sturen" class="beheer-icon-img"></a>` : `<img src="/icon-white.png" alt="" class="beheer-icon-img beheer-icon-inactive">`)}</td>
     </tr>`).join('');
 
