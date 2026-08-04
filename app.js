@@ -315,7 +315,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     return `${esc(van_)}<br>&ndash; ${esc(tot_)}`;
   }
 
-  const rows = filtered.map(o => `
+  function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_plaats} -> ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join('
     <tr class="${o.status === 'vervuld' ? 'vervuld' : ''}">
       <td><span class="badge badge-${o.type}">${o.type === 'vracht' ? 'Vracht' : 'Combi vrij'}</span></td>
       <td><span class="route-part">${locatie(o.van_land, o.van_postcode, o.van_plaats)}</span> &rarr; <span class="route-part">${locatie(o.naar_land, o.naar_postcode, o.naar_plaats)}</span></td>
@@ -326,7 +326,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
       <td>${o.gewicht ? esc(o.gewicht) + ' t' : '-'}</td>
       <td>${o.type_lading ? esc(o.type_lading) : '-'}${o.opmerking ? '<br><small>' + esc(o.opmerking) + '</small>' : ''}</td>
       <td>${esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; ${esc(o.telefoon)}${o.email ? ' &middot; ' + esc(o.email) : ''}</small></td>
-      <td>${o.bedrijf_id === req.bedrijf.id ? `<a href="/aanbieding/${o.id}" class="beheer-link">Beheer</a>` : ''}</td>
+      <td>${o.bedrijf_id === req.bedrijf.id ? `<a href="/aanbieding/${o.id}" class="beheer-icon" title="Bewerken"><img src="/icon-dark.png" alt="Bewerken" class="beheer-icon-img"></a>` : (o.email ? `<a href="${esc(mailtoLink(o))}" class="beheer-icon" title="Mail sturen naar ${esc(o.bedrijf)}"><img src="/icon-white.png" alt="Mail sturen" class="beheer-icon-img"></a>` : `<img src="/icon-white.png" alt="" class="beheer-icon-img beheer-icon-inactive">`)}</td>
     </tr>`).join('');
 
   const body = `
