@@ -244,7 +244,7 @@ table.offers tr.vervuld { opacity: 0.5; }
 
 .empty { text-align: center; color: var(--grijs); padding: 30px !important; }
 
-.beheer-link { font-size: 0.8rem; color: var(--grijs); white-space: nowrap; } .beheer-icon { display: inline-flex; align-items: center; justify-content: center; } .beheer-icon-img { width: 28px; height: 28px; display: block; transition: transform 0.15s ease; } .beheer-icon:hover .beheer-icon-img { transform: scale(1.1); } .beheer-icon-inactive { opacity: 0.35; cursor: default; }
+.beheer-link { font-size: 0.8rem; color: var(--grijs); white-space: nowrap; } .beheer-icon { display: inline-flex; align-items: center; justify-content: center; } .beheer-icon-img { width: 42px; height: 42px; display: block; transition: transform 0.15s ease; } .beheer-icon:hover .beheer-icon-img { transform: scale(1.1); } .beheer-icon-inactive { opacity: 0.35; cursor: default; }
 
 .offer-form {
           background: white;
