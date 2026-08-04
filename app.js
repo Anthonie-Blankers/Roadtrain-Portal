@@ -54,6 +54,13 @@ async function migreer() {
       geplaatst_op TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS bedrijf_id TEXT`);
+  // koppel bestaande aanbiedingen (zonder eigenaar) op basis van bedrijfsnaam, zodat oude data niet wees wordt
+  await pool.query(`
+    UPDATE offers o SET bedrijf_id = c.id
+    FROM companies c
+    WHERE o.bedrijf_id IS NULL AND o.bedrijf = c.naam
+  `);
 }
 
 // ---------- sessies (ondertekende cookies, geen extra dependencies) ----------
@@ -319,7 +326,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
       <td>${o.gewicht ? esc(o.gewicht) + ' t' : '-'}</td>
       <td>${o.type_lading ? esc(o.type_lading) : '-'}${o.opmerking ? '<br><small>' + esc(o.opmerking) + '</small>' : ''}</td>
       <td>${esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; ${esc(o.telefoon)}${o.email ? ' &middot; ' + esc(o.email) : ''}</small></td>
-      <td><a href="/aanbieding/${o.id}" class="beheer-link">Beheer</a></td>
+      <td>${o.bedrijf_id === req.bedrijf.id ? `<a href="/aanbieding/${o.id}" class="beheer-link">Beheer</a>` : ''}</td>
     </tr>`).join('');
 
   const body = `
@@ -583,18 +590,19 @@ app.post('/nieuw', requireLogin, ah(async (req, res) => {
     telefoon: req.body.telefoon || '',
     email: req.body.email || '',
     status: 'open',
+    bedrijf_id: req.bedrijf.id,
   };
 
   await pool.query(
     `INSERT INTO offers (id, type, van_land, van_postcode, van_plaats, naar_land, naar_postcode, naar_plaats,
       laaddatum_van, laaddatum_tot, losdatum_van, losdatum_tot, laadmeter, hoogte, gewicht,
-      type_lading, opmerking, bedrijf, contactpersoon, telefoon, email, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
+      type_lading, opmerking, bedrijf, contactpersoon, telefoon, email, status, bedrijf_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
     [offer.id, offer.type, offer.van_land, offer.van_postcode, offer.van_plaats,
      offer.naar_land, offer.naar_postcode, offer.naar_plaats,
      offer.laaddatum_van, offer.laaddatum_tot, offer.losdatum_van, offer.losdatum_tot,
      offer.laadmeter, offer.hoogte, offer.gewicht, offer.type_lading, offer.opmerking,
-     offer.bedrijf, offer.contactpersoon, offer.telefoon, offer.email, offer.status]
+     offer.bedrijf, offer.contactpersoon, offer.telefoon, offer.email, offer.status, offer.bedrijf_id]
   );
 
   const body = `
@@ -610,6 +618,9 @@ app.get('/aanbieding/:id', requireLogin, ah(async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM offers WHERE id = $1', [req.params.id]);
   const offer = rows[0];
   if (!offer) return res.status(404).send(layout(req, 'Niet gevonden', '<p>Aanbieding niet gevonden.</p>'));
+  if (offer.bedrijf_id !== req.bedrijf.id) {
+    return res.status(403).send(layout(req, 'Geen toegang', '<p>Je hebt geen toegang tot deze aanbieding. <a href="/overzicht">Terug naar overzicht</a></p>'));
+  }
 
   const opgeslagen = req.query.opgeslagen === '1';
 
@@ -732,6 +743,9 @@ app.post('/aanbieding/:id/bewerken', requireLogin, ah(async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM offers WHERE id = $1', [req.params.id]);
   const offer = rows[0];
   if (!offer) return res.status(404).send(layout(req, 'Niet gevonden', '<p>Aanbieding niet gevonden. <a href="/overzicht">Terug</a></p>'));
+  if (offer.bedrijf_id !== req.bedrijf.id) {
+    return res.status(403).send(layout(req, 'Geen toegang', '<p>Je hebt geen toegang tot deze aanbieding. <a href="/overzicht">Terug naar overzicht</a></p>'));
+  }
 
   const laaddatumVan = req.body.laaddatum_van || offer.laaddatum_van;
   const losdatumVan = req.body.losdatum_van || offer.losdatum_van;
@@ -779,6 +793,9 @@ app.post('/aanbieding/:id/status', requireLogin, ah(async (req, res) => {
   const offer = rows[0];
   if (!offer) {
     return res.status(404).send(layout(req, 'Niet gevonden', '<p>Aanbieding niet gevonden. <a href="/overzicht">Terug</a></p>'));
+  }
+  if (offer.bedrijf_id !== req.bedrijf.id) {
+    return res.status(403).send(layout(req, 'Geen toegang', '<p>Je hebt geen toegang tot deze aanbieding. <a href="/overzicht">Terug naar overzicht</a></p>'));
   }
   if (req.body.actie === 'verwijderen') {
     await pool.query('DELETE FROM offers WHERE id = $1', [offer.id]);
