@@ -285,5 +285,5 @@ table.offers tr.vervuld { opacity: 0.5; }
 
 @media (max-width: 640px) {
           .hero-actions { flex-direction: column; align-items: stretch; }
-          .btn-hero { max-width: none; }
+          .btn-hero { max-width: none; }@media (max-width: 700px) { table.offers { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; } table.offers th, table.offers td { white-space: nowrap; } }
 }
