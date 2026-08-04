@@ -245,7 +245,7 @@ app.post('/login', ah(async (req, res) => {
     return res.redirect(`/login?fout=1&next=${encodeURIComponent(next)}`);
   }
   const waarde = `${bedrijf.id}.${sign(bedrijf.id)}`;
-  res.cookie('sessie', waarde, { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 90, sameSite: 'lax' });
+  res.cookie('sessie', waarde, { httpOnly: true, secure: true, maxAge: 1000 * 60 * 60 * 24 * 90, sameSite: 'lax' });
   res.redirect(next);
 }));
 
