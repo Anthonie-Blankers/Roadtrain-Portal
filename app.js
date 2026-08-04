@@ -410,7 +410,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   <table class="offers aanbiedingen">
     <thead>
       <tr>
-        <th>Type</th><th>Route</th><th>Laden</th><th>Lossen</th><th>Laadmeter</th><th>Hoogte</th><th>Gewicht</th><th>Lading / opmerking</th><th>Contact</th><th></th>
+        <th>Type</th><th>Route</th><th>Laden</th><th>Lossen</th><th>Laadmeter</th><th>Hoogte</th><th>Gewicht</th><th>Lading / opmerking</th><th>Contact</th><th>Actie</th>
       </tr>
     </thead>
     <tbody>
