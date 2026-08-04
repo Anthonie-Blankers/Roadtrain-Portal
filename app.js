@@ -257,7 +257,7 @@ app.get('/uitloggen', (req, res) => {
 // overview + filters (login vereist)
 app.get('/overzicht', requireLogin, ah(async (req, res) => {
   const { rows: offers } = await pool.query('SELECT * FROM offers');
-  offers.sort((a, b) => new Dat(b.geplaatst_op) - new Date(a.geplaatst_op));
+  offers.sort((a, b) => new Date(b.geplaatst_op) - new Date(a.geplaatst_op));
 
   const q = req.query;
   const type = q.type || 'alle';
