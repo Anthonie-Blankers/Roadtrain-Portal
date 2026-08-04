@@ -785,7 +785,7 @@ app.post('/aanbieding/:id/bewerken', requireLogin, ah(async (req, res) => {
      bijgewerkt.bedrijf, bijgewerkt.contactpersoon, bijgewerkt.telefoon, bijgewerkt.email, offer.id]
   );
 
-  res.redirect(`/aanbieding/${offer.id}?opgeslagen=1`);
+  res.redirect('/overzicht');
 }));
 
 app.post('/aanbieding/:id/status', requireLogin, ah(async (req, res) => {
