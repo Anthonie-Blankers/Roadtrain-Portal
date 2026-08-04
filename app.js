@@ -732,7 +732,7 @@ app.get('/aanbieding/:id', requireLogin, ah(async (req, res) => {
       </div>
     </form>
     <form method="post" action="/aanbieding/${offer.id}/status" style="margin-top:16px;">
-      <button type="submit" name="actie" value="vervuld">Markeer als afgehandeld</button>
+      <button type="submit" name="actie" value="vervuld">Markeer als afgehandeld</button> <button type="submit" name="actie" value="heropenen">Heropenen</button>
       <button type="submit" name="actie" value="verwijderen" onclick="return confirm('Weet je zeker dat je deze aanbieding wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')">Verwijderen</button>
     </form>
   `;
@@ -774,7 +774,7 @@ app.post('/aanbieding/:id/bewerken', requireLogin, ah(async (req, res) => {
   };
 
   await pool.query(
-    `UPDATE offers SET type=$1, van_land=$2, van_postcode=$3, van_plaats=$4, naar_land=$5, naar_postcode=$6,
+    `UPDATE offers SET type=$1, status = CASE WHEN status = 'vervuld' AND COALESCE(NULLIF($11,''), $10)::date >= CURRENT_DATE THEN 'open' ELSE status END, van_land=$2, van_postcode=$3, van_plaats=$4, naar_land=$5, naar_postcode=$6,
       naar_plaats=$7, laaddatum_van=$8, laaddatum_tot=$9, losdatum_van=$10, losdatum_tot=$11, laadmeter=$12,
       hoogte=$13, gewicht=$14, type_lading=$15, opmerking=$16, bedrijf=$17, contactpersoon=$18, telefoon=$19,
       email=$20 WHERE id=$21`,
@@ -800,7 +800,7 @@ app.post('/aanbieding/:id/status', requireLogin, ah(async (req, res) => {
   if (req.body.actie === 'verwijderen') {
     await pool.query('DELETE FROM offers WHERE id = $1', [offer.id]);
   } else {
-    await pool.query("UPDATE offers SET status = 'vervuld' WHERE id = $1", [offer.id]);
+    await pool.query(req.body.actie === 'heropenen' ? "UPDATE offers SET status = 'open' WHERE id = $1" : "UPDATE offers SET status = 'vervuld' WHERE id = $1", [offer.id]);
   }
   res.redirect('/overzicht');
 }));
