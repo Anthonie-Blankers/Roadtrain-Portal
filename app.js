@@ -152,7 +152,7 @@ function layout(req, title, body, opts = {}) {
 <body>
 <header class="topbar">
   <div class="wrap">
-    <a href="/" class="logo"><img src="/logo-header-final.png" alt="CombiMatch â The Roadtrain Exchange" class="logo-img-wordmark"></a>
+    <a href="/" class="logo"><img src="/logo-header-final.png" alt="CombiMatch &mdash; The Roadtrain Exchange" class="logo-img-wordmark"></a>
     <nav>
       <a href="/">Home</a>
       <a href="/overzicht">Overzicht</a>
@@ -201,7 +201,7 @@ app.get('/', (req, res) => {
     <p class="hero-link"><a href="/overzicht">Bekijk alle openstaande aanbiedingen &rarr;</a></p>
   </div>
   `;
-  res.send(layout(req, 'CombiMatch &eacute; The Roadtrain Exchange', body));
+  res.send(layout(req, 'CombiMatch - The Roadtrain Exchange', body));
 });
 
 // ---------- inloggen (bedrijven) ----------
@@ -223,7 +223,7 @@ app.get('/login', (req, res) => {
     </div>
   </form>
   `;
-  res.send(layout(req, 'Combi-Match &ndash; Inloggen', body));
+  res.send(layout(req, 'Combi-Match - Inloggen', body));
 });
 
 app.post('/login', ah(async (req, res) => {
@@ -412,7 +412,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   </table>
   `;
 
-  res.send(layout(req, 'Combi-Match â Overzicht', body));
+  res.send(layout(req, 'Combi-Match - Overzicht', body));
 }));
 
 // ---------- nieuwe aanbieding: gedeelde formulier-renderer ----------
@@ -544,11 +544,11 @@ function nieuwFormBody(modus) {
 }
 
 app.get('/nieuw/vracht', requireLogin, (req, res) => {
-  res.send(layout(req, 'Combi-Match â Vracht aanbieden', nieuwFormBody('vracht')));
+  res.send(layout(req, 'Combi-Match - Vracht aanbieden', nieuwFormBody('vracht')));
 });
 
 app.get('/nieuw/capaciteit', requireLogin, (req, res) => {
-  res.send(layout(req, 'Combi-Match â Capaciteit aanbieden', nieuwFormBody('capaciteit')));
+  res.send(layout(req, 'Combi-Match - Capaciteit aanbieden', nieuwFormBody('capaciteit')));
 });
 
 // oude link blijft werken
@@ -602,7 +602,7 @@ app.post('/nieuw', requireLogin, ah(async (req, res) => {
     <p>Je aanbieding staat nu in het overzicht.</p>
     <p><a href="/overzicht">Naar het overzicht</a> &middot; <a href="/">Terug naar home</a></p>
   `;
-  res.send(layout(req, 'Combi-Match â Geplaatst', body));
+  res.send(layout(req, 'Combi-Match - Geplaatst', body));
 }));
 
 // manage single offer (mark done / delete)
@@ -725,7 +725,7 @@ app.get('/aanbieding/:id', requireLogin, ah(async (req, res) => {
       <button type="submit" name="actie" value="verwijderen" onclick="return confirm('Weet je zeker dat je deze aanbieding wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')">Verwijderen</button>
     </form>
   `;
-  res.send(layout(req, 'Combi-Match â Bewerken', body));
+  res.send(layout(req, 'Combi-Match - Bewerken', body));
 }));
 
 app.post('/aanbieding/:id/bewerken', requireLogin, ah(async (req, res) => {
@@ -806,7 +806,7 @@ app.get('/admin/login', (req, res) => {
     </div>
   </form>
   `;
-  res.send(layout(req, 'Combi-Match &ndash; Beheer inloggen', body));
+  res.send(layout(req, 'Combi-Match - Beheer inloggen', body));
 });
 
 app.post('/admin/login', (req, res) => {
@@ -868,7 +868,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
   </table>
   <p style="margin-top:20px;"><a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
   `;
-  res.send(layout(req, 'Combi-Match &ndash; Beheer', body));
+  res.send(layout(req, 'Combi-Match - Beheer', body));
 }));
 
 function genCode(lengte = 6) {
