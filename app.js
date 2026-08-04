@@ -310,9 +310,9 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   filtered.sort((a, b) => new Date(a.laaddatum_van) - new Date(b.laaddatum_van));
 
   function periode(van_, tot_) {
-    if (!van_) return '-';
-    if (!tot_ || tot_ === van_) return esc(van_);
-    return `${esc(van_)}<br>&ndash; ${esc(tot_)}`;
+    const fmt = d => { const p = (d||'').split('-'); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : (d||''); }; if (!van_) return '-';
+    if (!tot_ || tot_ === van_) return esc(fmt(van_));
+    return `${esc(fmt(van_))}<br>&ndash; ${esc(fmt(tot_))}`;
   }
 
   function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join(String.fromCharCode(13,10)); } function mailtoLink(o) { const onderwerp = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`; return `mailto:${o.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(mailtoBody(o))}`; }  const rows = filtered.map(o => `
