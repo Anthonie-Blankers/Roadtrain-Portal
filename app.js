@@ -428,20 +428,20 @@ function nieuwFormBody(modus, bedrijfNaam) {
   const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
   const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
   const intro = isCapaciteit
-    ? 'Heb je een combi of LZV (deels) vrij? Geef door welke ruimte je te bieden hebt, dan kunnen andere bedrijven daarop reageren.'
+    ? 'Heb je een combi of LZV vrij? Geef door welke ruimte je te bieden hebt, dan kunnen andere bedrijven daarop reageren.'
     : 'Zoek je een combi of LZV voor jouw lading? Vul de gegevens van je vracht in, dan kunnen vervoerders met vrije capaciteit reageren.';
 
   const gewichtLabel = isCapaciteit
     ? 'Gewicht (ton) &mdash; hoeveel gewicht kan er geladen worden?'
     : 'Gewicht (ton, optioneel)';
   const laadmeterLabel = isCapaciteit
-    ? 'Laadmeter &mdash; hoe lang is de totale combi?'
+    ? 'Laadmeter &mdash; hoeveel meter is de totale laadruimte?'
     : 'Laadmeter';
   const hoogteLabel = isCapaciteit
     ? 'Hoogte (m) &mdash; wat is de binnenhoogte?'
     : 'Hoogte (m) &mdash; wat is de hoogte van de lading?';
   const ladingLabel = isCapaciteit
-    ? 'Lengte motorwagen / aanhanger &mdash; hoe lang zijn de motorwagen en aanhanger?'
+    ? 'Lengte &mdash; hoe lang zijn de motorwagen en aanhanger/trailer?'
     : 'Type lading';
   const ladingPlaceholder = isCapaciteit ? 'bijv. 7,20m / 8,30m' : 'bijv. blokpallets';
   const opmerkingPlaceholder = isCapaciteit ? 'bijv. beschikbaar vanaf 14:00' : 'bijv. geen stapelen';
