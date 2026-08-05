@@ -153,7 +153,7 @@ function layout(req, title, body, opts = {}) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${esc(title)}</title><link rel="icon" href="/logo.png">
+<title>${esc(title)}</title><link rel="icon" href="/icon-white.png">
 <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
 </head>
 <body>
