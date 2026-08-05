@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 
-const app = express();
+const app = express(); app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 const SESSIE_GEHEIM = process.env.SESSIE_GEHEIM || 'dev-geheim-verander-mij';
 const ADMIN_WACHTWOORD = process.env.ADMIN_WACHTWOORD || 'wijzig-mij';
@@ -212,13 +212,13 @@ app.get('/', (req, res) => {
 });
 
 // ---------- inloggen (bedrijven) ----------
-app.get('/login', (req, res) => {
+const inlogPogingen = new Map(); function rateLimitCheck(sleutel) { const nu = Date.now(); const entry = inlogPogingen.get(sleutel); if (entry && entry.until > nu) return Math.ceil((entry.until - nu) / 60000); return 0; } function rateLimitMislukt(sleutel) { const nu = Date.now(); const entry = inlogPogingen.get(sleutel) || { count: 0, until: 0 }; entry.count += 1; if (entry.count >= 5) { entry.until = nu + 15 * 60 * 1000; entry.count = 0; } inlogPogingen.set(sleutel, entry); } function rateLimitReset(sleutel) { inlogPogingen.delete(sleutel); } app.get('/login', (req, res) => {
   const next = req.query.next || '/overzicht';
-  const fout = req.query.fout === '1';
+  const fout = req.query.fout === '1'; const geblokkeerd = req.query.fout === '2';
   const body = `
   <h1>Inloggen</h1>
   <p class="form-intro">Voer de toegangscode van je bedrijf in om aanbiedingen te bekijken en te plaatsen. Geen code? Neem contact op met CombiMatch.</p>
-  ${fout ? '<p style="color:#b00020;font-weight:600;">Deze toegangscode is niet geldig. Probeer het opnieuw.</p>' : ''}
+  ${fout ? '<p style="color:#b00020;font-weight:600;">Deze toegangscode is niet geldig. Probeer het opnieuw.</p>' : ''}${geblokkeerd ? '<p style="color:#b00020;font-weight:600;">Te veel mislukte pogingen. Probeer het over 15 minuten opnieuw.</p>' : ''}
   <form class="offer-form" method="post" action="/login">
     <input type="hidden" name="next" value="${esc(next)}">
     <div class="form-row">
@@ -235,17 +235,17 @@ app.get('/login', (req, res) => {
 
 app.post('/login', ah(async (req, res) => {
   const code = (req.body.code || '').trim().toUpperCase();
-  const next = req.body.next || '/overzicht';
+  const next = req.body.next || '/overzicht'; const rlKey = 'login:' + req.ip; const wachtMin = rateLimitCheck(rlKey); if (wachtMin > 0) { return res.redirect(`/login?fout=2&next=${encodeURIComponent(next)}`); }
   const { rows } = await pool.query(
     'SELECT * FROM companies WHERE actief = true AND UPPER(code) = $1',
     [code]
   );
   const bedrijf = rows[0];
   if (!bedrijf) {
-    return res.redirect(`/login?fout=1&next=${encodeURIComponent(next)}`);
+    rateLimitMislukt(rlKey); return res.redirect(`/login?fout=1&next=${encodeURIComponent(next)}`);
   }
   const waarde = `${bedrijf.id}.${sign(bedrijf.id)}`;
-  res.cookie('sessie', waarde, { httpOnly: true, secure: true, maxAge: 1000 * 60 * 60 * 24 * 90, sameSite: 'lax' });
+  rateLimitReset(rlKey); res.cookie('sessie', waarde, { httpOnly: true, secure: true, maxAge: 1000 * 60 * 60 * 24 * 90, sameSite: 'lax' });
   res.redirect(next);
 }));
 
@@ -808,10 +808,10 @@ app.post('/aanbieding/:id/status', requireLogin, ah(async (req, res) => {
 // ---------- admin: bedrijven / toegangscodes ----------
 app.get('/admin/login', (req, res) => {
   const next = req.query.next || '/admin';
-  const fout = req.query.fout === '1';
+  const fout = req.query.fout === '1'; const geblokkeerd = req.query.fout === '2';
   const body = `
   <h1>Beheer &ndash; inloggen</h1>
-  ${fout ? '<p style="color:#b00020;font-weight:600;">Wachtwoord onjuist.</p>' : ''}
+  ${fout ? '<p style="color:#b00020;font-weight:600;">Wachtwoord onjuist.</p>' : ''}${geblokkeerd ? '<p style="color:#b00020;font-weight:600;">Te veel mislukte pogingen. Probeer het over 15 minuten opnieuw.</p>' : ''}
   <form class="offer-form" method="post" action="/admin/login">
     <input type="hidden" name="next" value="${esc(next)}">
     <div class="form-row">
@@ -827,11 +827,11 @@ app.get('/admin/login', (req, res) => {
 });
 
 app.post('/admin/login', (req, res) => {
-  const next = req.body.next || '/admin';
+  const next = req.body.next || '/admin'; const rlKeyAdmin = 'admin:' + req.ip; const wachtMinAdmin = rateLimitCheck(rlKeyAdmin); if (wachtMinAdmin > 0) { return res.redirect(`/admin/login?fout=2&next=${encodeURIComponent(next)}`); }
   if ((req.body.wachtwoord || '') !== ADMIN_WACHTWOORD) {
-    return res.redirect(`/admin/login?fout=1&next=${encodeURIComponent(next)}`);
+    rateLimitMislukt(rlKeyAdmin); return res.redirect(`/admin/login?fout=1&next=${encodeURIComponent(next)}`);
   }
-  res.cookie('admin_sessie', sign('admin-sessie-marker'), { httpOnly: true, maxAge: 1000 * 60 * 60 * 12, sameSite: 'lax' });
+  rateLimitReset(rlKeyAdmin); res.cookie('admin_sessie', sign('admin-sessie-marker'), { httpOnly: true, secure: true, maxAge: 1000 * 60 * 60 * 12, sameSite: 'lax' });
   res.redirect(next);
 });
 
