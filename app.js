@@ -270,7 +270,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   const losVanaf = q.los_vanaf || '';
   const losTot = q.los_tot || '';
   const lmMin = q.lm_min !== undefined && q.lm_min !== '' ? parseFloat(q.lm_min) : 13.65;
-  const lmMax = q.lm_max !== undefined && q.lm_max !== '' ? parseFloat(q.lm_max) : 16.0;
+  const lmMax = q.lm_max !== undefined && q.lm_max !== '' ? parseFloat(q.lm_max) : 22.0;
   const hMin = q.h_min !== undefined && q.h_min !== '' ? parseFloat(q.h_min) : 0.1;
   const hMax = q.h_max !== undefined && q.h_max !== '' ? parseFloat(q.h_max) : 3.10;
   const toonAfgehandeld = q.toon_afgehandeld === '1';
@@ -506,7 +506,7 @@ function nieuwFormBody(modus, bedrijfNaam) {
     <div class="form-row two-col">
       <div>
         <label>${laadmeterLabel}</label>
-        <input type="number" step="any" min="13.65" max="16.0" name="laadmeter" required placeholder="bijv. 15.5">
+        <input type="number" step="any" min="13.65" max="22.0" name="laadmeter" required placeholder="bijv. 15.5">
       </div>
       <div>
         <label>${hoogteLabel}</label>
@@ -690,7 +690,7 @@ app.get('/aanbieding/:id', requireLogin, ah(async (req, res) => {
       <div class="form-row two-col">
         <div>
           <label>Laadmeter</label>
-          <input type="number" step="any" min="13.65" max="16.0" name="laadmeter" required value="${esc(offer.laadmeter)}">
+          <input type="number" step="any" min="13.65" max="22.0" name="laadmeter" required value="${esc(offer.laadmeter)}">
         </div>
         <div>
           <label>Hoogte (m)</label>
