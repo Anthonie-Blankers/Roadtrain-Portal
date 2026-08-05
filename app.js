@@ -173,7 +173,7 @@ function layout(req, title, body, opts = {}) {
 ${body}
 </main>
 <footer class="wrap footer">
-  <p>CombiMatch &ndash; The Roadtrain Exchange verbindt vervoerders met (volume)combi's van alle types. Via &eacute;&eacute;n platform deel je eenvoudig beschikbare capaciteit, vind je passende vrachten en werk je samen met betrouwbare transportpartners. Zo verhogen we samen de beladingsgraad, beperken we lege kilometers en maken we transport slimmer, duurzamer en rendabeler.</p>
+  <p>CombiMatch &ndash; The Roadtrain Exchange verbindt vervoerders met (volume)combi's & LZV's van alle types. Via &eacute;&eacute;n platform deel je eenvoudig beschikbare capaciteit, vind je passende vrachten en werk je samen met betrouwbare transportpartners. Zo verhogen we samen de beladingsgraad, beperken we lege kilometers en maken we transport slimmer, duurzamer en rendabeler.</p>
   <p style="margin-top:8px;"><a href="/admin/login" style="color:var(--grijs);font-size:0.75rem;">Beheer</a></p>
 </footer>
 </body>
@@ -194,7 +194,7 @@ app.get('/', (req, res) => {
   const body = `
   <div class="hero">
     <img src="/logo-hero.png" alt="CombiMatch - The Roadtrain Exchange" class="hero-logo">
-    <p class="hero-tagline">E&eacute;n platform waar vervoerders die met combi's rijden vrachten en beschikbare laadcapaciteit met elkaar delen &mdash; minder lege kilometers, een hogere beladingsgraad.</p>
+    <p class="hero-tagline">E&eacute;n platform waar vervoerders die met combi's & LZV's rijden vrachten en beschikbare laadcapaciteit met elkaar delen &mdash; minder lege kilometers, een hogere beladingsgraad.</p>
     <div class="hero-actions">
       <a href="/nieuw/vracht" class="btn-hero btn-hero-vracht">
         <span class="btn-hero-title">Vracht aanbieden</span>
@@ -428,8 +428,8 @@ function nieuwFormBody(modus, bedrijfNaam) {
   const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
   const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
   const intro = isCapaciteit
-    ? 'Heb je een combi (deels) vrij? Geef door welke ruimte je te bieden hebt, dan kunnen andere bedrijven daarop reageren.'
-    : 'Zoek je een combi voor jouw lading? Vul de gegevens van je vracht in, dan kunnen vervoerders met vrije capaciteit reageren.';
+    ? 'Heb je een combi of LZV (deels) vrij? Geef door welke ruimte je te bieden hebt, dan kunnen andere bedrijven daarop reageren.'
+    : 'Zoek je een combi of LZV voor jouw lading? Vul de gegevens van je vracht in, dan kunnen vervoerders met vrije capaciteit reageren.';
 
   const gewichtLabel = isCapaciteit
     ? 'Gewicht (ton) &mdash; hoeveel gewicht kan er geladen worden?'
