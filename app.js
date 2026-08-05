@@ -428,7 +428,7 @@ function nieuwFormBody(modus, bedrijfNaam) {
   const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
   const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
   const intro = isCapaciteit
-    ? 'Heb je een combi of LZV vrij? Geef door welke ruimte je te bieden hebt, dan kunnen andere bedrijven daarop reageren.'
+    ? 'Heb je een combi of LZV vrij? Geef door waar hij leeg is, waarheen hij zou moeten en wat de afmetingen zijn, dan kunnen andere bedrijven daarop reageren.'
     : 'Zoek je een combi of LZV voor jouw lading? Vul de gegevens van je vracht in, dan kunnen vervoerders met vrije capaciteit reageren.';
 
   const gewichtLabel = isCapaciteit
