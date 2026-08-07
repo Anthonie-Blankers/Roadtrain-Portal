@@ -54,7 +54,7 @@ async function migreer() {
       geplaatst_op TIMESTAMPTZ DEFAULT now()
     );
   `);
-  await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS bedrijf_id TEXT`);
+  await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS bedrijf_id TEXT`); await pool.query(`CREATE TABLE IF NOT EXISTS archief (id TEXT PRIMARY KEY, type TEXT, van_land TEXT, van_postcode TEXT, van_plaats TEXT, naar_land TEXT, naar_postcode TEXT, naar_plaats TEXT, laaddatum_van TEXT, laaddatum_tot TEXT, losdatum_van TEXT, losdatum_tot TEXT, laadmeter TEXT, hoogte TEXT, gewicht TEXT, type_lading TEXT, opmerking TEXT, bedrijf TEXT, contactpersoon TEXT, telefoon TEXT, email TEXT, bedrijf_id TEXT, online_sinds TIMESTAMPTZ, offline_sinds TIMESTAMPTZ NOT NULL DEFAULT now())`);
   // koppel bestaande aanbiedingen (zonder eigenaar) op basis van bedrijfsnaam, zodat oude data niet wees wordt
   await pool.query(`
     UPDATE offers o SET bedrijf_id = c.id
@@ -129,7 +129,7 @@ function ah(fn) {
   return (req, res, next) => fn(req, res, next).catch(next);
 }
 
-function esc(str = '') {
+async function archiveerAanbieding(offer) { await pool.query(`INSERT INTO archief (id, type, van_land, van_postcode, van_plaats, naar_land, naar_postcode, naar_plaats, laaddatum_van, laaddatum_tot, losdatum_van, losdatum_tot, laadmeter, hoogte, gewicht, type_lading, opmerking, bedrijf, contactpersoon, telefoon, email, bedrijf_id, online_sinds) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23) ON CONFLICT (id) DO NOTHING`, [offer.id, offer.type, offer.van_land, offer.van_postcode, offer.van_plaats, offer.naar_land, offer.naar_postcode, offer.naar_plaats, offer.laaddatum_van, offer.laaddatum_tot, offer.losdatum_van, offer.losdatum_tot, offer.laadmeter, offer.hoogte, offer.gewicht, offer.type_lading, offer.opmerking, offer.bedrijf, offer.contactpersoon, offer.telefoon, offer.email, offer.bedrijf_id, offer.geplaatst_op]); } function esc(str = '') {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -798,7 +798,7 @@ app.post('/aanbieding/:id/status', requireLogin, ah(async (req, res) => {
     return res.status(403).send(layout(req, 'Geen toegang', '<p>Je hebt geen toegang tot deze aanbieding. <a href="/overzicht">Terug naar overzicht</a></p>'));
   }
   if (req.body.actie === 'verwijderen') {
-    await pool.query('DELETE FROM offers WHERE id = $1', [offer.id]);
+    await archiveerAanbieding(offer); await pool.query('DELETE FROM offers WHERE id = $1', [offer.id]);
   } else {
     await pool.query(req.body.actie === 'heropenen' ? "UPDATE offers SET status = 'open' WHERE id = $1" : "UPDATE offers SET status = 'vervuld' WHERE id = $1", [offer.id]);
   }
@@ -907,17 +907,17 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
   </form>
   ` : ''}
 
-  <p style="margin-top:20px;"><a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
+  <p style="margin-top:20px;"><a href="/admin/archief">Archief bekijken</a> &middot; <a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
   `;
   res.send(layout(req, 'Combi-Match - Beheer', body));
 }));
 
 app.post('/admin/aanbiedingen/opschonen', requireAdmin, ah(async (req, res) => {
-  await pool.query('DELETE FROM offers WHERE bedrijf_id IS NULL');
+  const { rows: teArchiveren } = await pool.query('SELECT * FROM offers WHERE bedrijf_id IS NULL'); for (const o of teArchiveren) { await archiveerAanbieding(o); } await pool.query('DELETE FROM offers WHERE bedrijf_id IS NULL');
   res.redirect('/admin');
 }));
 
-function genCode(lengte = 6) {
+app.get('/admin/archief', requireAdmin, ah(async (req, res) => { const { rows: archief } = await pool.query('SELECT * FROM archief ORDER BY offline_sinds DESC'); function periodeA(van_, tot_) { const fmt = d => { const p = (d||'').split('-'); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : (d||''); }; if (!van_) return '-'; if (!tot_ || tot_ === van_) return esc(fmt(van_)); return `${esc(fmt(van_))}<br>&ndash; ${esc(fmt(tot_))}`; } function fmtDatumTijd(d) { if (!d) return '-'; const dt = new Date(d); return dt.toLocaleDateString('nl-NL') + ' ' + dt.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }); } const rijen = archief.map(o => `<tr><td><span class="badge badge-${o.type}">${o.type === 'vracht' ? 'Vracht' : 'Combi vrij'}</span></td><td><span class="route-part">${locatie(o.van_land, o.van_postcode, o.van_plaats)}</span> &rarr; <span class="route-part">${locatie(o.naar_land, o.naar_postcode, o.naar_plaats)}</span></td><td>${periodeA(o.laaddatum_van, o.laaddatum_tot)}</td><td>${periodeA(o.losdatum_van, o.losdatum_tot)}</td><td>${esc(o.laadmeter)} lm</td><td>${esc(o.hoogte)} m</td><td>${o.gewicht ? esc(o.gewicht) + ' t' : '-'}</td><td>${o.type_lading ? esc(o.type_lading) : '-'}${o.opmerking ? '<br><small>' + esc(o.opmerking) + '</small>' : ''}</td><td>${esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; ${esc(o.telefoon)}${o.email ? ' &middot; ' + esc(o.email) : ''}</small></td><td>${fmtDatumTijd(o.online_sinds)}</td><td>${fmtDatumTijd(o.offline_sinds)}</td></tr>`).join(''); const body = `<h1>Archief &ndash; verwijderde aanbiedingen</h1><p class="form-intro">Overzicht van alle aanbiedingen die verwijderd of automatisch opgeruimd zijn, inclusief wanneer ze online geplaatst en offline gehaald zijn.</p><table class="offers"><thead><tr><th>Type</th><th>Route</th><th>Laden</th><th>Lossen</th><th>Laadmeter</th><th>Hoogte</th><th>Gewicht</th><th>Lading / opmerking</th><th>Contact</th><th>Online sinds</th><th>Offline sinds</th></tr></thead><tbody>${rijen || '<tr><td colspan="11" class="empty">Nog geen aanbiedingen gearchiveerd.</td></tr>'}</tbody></table><p style="margin-top:20px;"><a href="/admin">Terug naar beheer</a></p>`; res.send(layout(req, 'Combi-Match - Archief', body, { wideMain: true })); })); function genCode(lengte = 6) {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // zonder verwarrende tekens (O/0, I/1/L)
   let code = '';
   for (let i = 0; i < lengte; i++) {
@@ -954,7 +954,7 @@ app.use((err, req, res, next) => {
   res.status(500).send('Er ging iets mis. Probeer het later opnieuw.');
 });
 
-async function onderhoudAanbiedingen() { await pool.query("UPDATE offers SET status = 'vervuld' WHERE status = 'open' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE"); await pool.query("DELETE FROM offers WHERE status = 'vervuld' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE - INTERVAL '7 days'"); } async function start() {
+async function onderhoudAanbiedingen() { await pool.query("UPDATE offers SET status = 'vervuld' WHERE status = 'open' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE"); const { rows: teArchiverenVerlopen } = await pool.query("SELECT * FROM offers WHERE status = 'vervuld' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE - INTERVAL '7 days'"); for (const o of teArchiverenVerlopen) { await archiveerAanbieding(o); } await pool.query("DELETE FROM offers WHERE status = 'vervuld' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE - INTERVAL '7 days'"); } async function start() {
   await migreer(); await onderhoudAanbiedingen(); setInterval(onderhoudAanbiedingen, 60 * 60 * 1000);
   app.listen(PORT, () => {
     console.log(`Combi-Match draait op http://localhost:${PORT}`);
