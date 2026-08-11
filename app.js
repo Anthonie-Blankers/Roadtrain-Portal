@@ -782,7 +782,7 @@ app.post('/aanbieding/:id/bewerken', requireLogin, ah(async (req, res) => {
      bijgewerkt.naar_land, bijgewerkt.naar_postcode, bijgewerkt.naar_plaats,
      bijgewerkt.laaddatum_van, bijgewerkt.laaddatum_tot, bijgewerkt.losdatum_van, bijgewerkt.losdatum_tot,
      bijgewerkt.laadmeter, bijgewerkt.hoogte, bijgewerkt.gewicht, bijgewerkt.type_lading, bijgewerkt.opmerking,
-     bijgewerkt.bedrijf, bijgewerkt.contactpersoon, bijgewerkt.telefoon, bijgewerkt.email, req.body.laadtijd_van || '', req.body.laadtijd_tot || '', req.body.lostijd_van || '', req.body.lostijd_tot || '', offer.id]
+     bijgewerkt.bedrijf, bijgewerkt.contactpersoon, bijgewerkt.telefoon, bijgewerkt.email, offer.id, req.body.laadtijd_van || '', req.body.laadtijd_tot || '', req.body.lostijd_van || '', req.body.lostijd_tot || '']
   );
 
   res.redirect('/overzicht');
