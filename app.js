@@ -482,13 +482,13 @@ function nieuwFormBody(modus, bedrijfNaam) {
     <div class="form-row two-col">
       <div>
         <label>Laaddatum van</label>
-        <input type="date" name="laaddatum_van" required></div><div class="two-col"><div><label>Openingstijd van (optioneel)</label><input type="time" name="laadtijd_van"></div><div><label>Openingstijd tot (optioneel)</label><input type="time" name="laadtijd_tot"></div></div><div><label>Laaddatum tot (optioneel)</label><input type="date" name="laaddatum_tot">
+        <input type="date" name="laaddatum_van" required></div><div class="form-row two-col"><div><label>Openingstijd van (optioneel)</label><input type="time" name="laadtijd_van"></div><div><label>Openingstijd tot (optioneel)</label><input type="time" name="laadtijd_tot"></div></div><div><label>Laaddatum tot (optioneel)</label><input type="date" name="laaddatum_tot">
       </div>
     </div>
     <div class="form-row two-col">
       <div>
         <label>Losdatum van</label>
-        <input type="date" name="losdatum_van" required></div><div class="two-col"><div><label>Openingstijd van (optioneel)</label><input type="time" name="lostijd_van"></div><div><label>Openingstijd tot (optioneel)</label><input type="time" name="lostijd_tot"></div></div><div><label>Losdatum tot (optioneel)</label><input type="date" name="losdatum_tot">
+        <input type="date" name="losdatum_van" required></div><div class="form-row two-col"><div><label>Openingstijd van (optioneel)</label><input type="time" name="lostijd_van"></div><div><label>Openingstijd tot (optioneel)</label><input type="time" name="lostijd_tot"></div></div><div><label>Losdatum tot (optioneel)</label><input type="date" name="losdatum_tot">
       </div>
     </div>
     <div class="form-row">
@@ -658,13 +658,13 @@ app.get('/aanbieding/:id', requireLogin, ah(async (req, res) => {
       <div class="form-row two-col">
         <div>
           <label>Laaddatum van</label>
-          <input type="date" name="laaddatum_van" required value="${esc(offer.laaddatum_van)}"></div><div class="two-col"><div><label>Openingstijd van (optioneel)</label><input type="time" name="laadtijd_van" value="${esc(offer.laadtijd_van)}"></div><div><label>Openingstijd tot (optioneel)</label><input type="time" name="laadtijd_tot" value="${esc(offer.laadtijd_tot)}"></div></div><div><label>Laaddatum tot (optioneel)</label><input type="date" name="laaddatum_tot" value="${esc(offer.laaddatum_tot)}">
+          <input type="date" name="laaddatum_van" required value="${esc(offer.laaddatum_van)}"></div><div class="form-row two-col"><div><label>Openingstijd van (optioneel)</label><input type="time" name="laadtijd_van" value="${esc(offer.laadtijd_van)}"></div><div><label>Openingstijd tot (optioneel)</label><input type="time" name="laadtijd_tot" value="${esc(offer.laadtijd_tot)}"></div></div><div><label>Laaddatum tot (optioneel)</label><input type="date" name="laaddatum_tot" value="${esc(offer.laaddatum_tot)}">
         </div>
       </div>
       <div class="form-row two-col">
         <div>
           <label>Losdatum van</label>
-          <input type="date" name="losdatum_van" required value="${esc(offer.losdatum_van)}"></div><div class="two-col"><div><label>Openingstijd van (optioneel)</label><input type="time" name="lostijd_van" value="${esc(offer.lostijd_van)}"></div><div><label>Openingstijd tot (optioneel)</label><input type="time" name="lostijd_tot" value="${esc(offer.lostijd_tot)}"></div></div><div><label>Losdatum tot (optioneel)</label><input type="date" name="losdatum_tot" value="${esc(offer.losdatum_tot)}">
+          <input type="date" name="losdatum_van" required value="${esc(offer.losdatum_van)}"></div><div class="form-row two-col"><div><label>Openingstijd van (optioneel)</label><input type="time" name="lostijd_van" value="${esc(offer.lostijd_van)}"></div><div><label>Openingstijd tot (optioneel)</label><input type="time" name="lostijd_tot" value="${esc(offer.lostijd_tot)}"></div></div><div><label>Losdatum tot (optioneel)</label><input type="date" name="losdatum_tot" value="${esc(offer.losdatum_tot)}">
         </div>
       </div>
       <div class="form-row">
