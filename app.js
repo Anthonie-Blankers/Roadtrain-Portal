@@ -319,8 +319,8 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     <tr class="${o.status === 'vervuld' ? 'vervuld' : ''}">
       <td><span class="badge badge-${o.type}">${o.type === 'vracht' ? 'Vracht' : 'Combi vrij'}</span></td>
       <td><span class="route-part">${locatie(o.van_land, o.van_postcode, o.van_plaats)}</span> &rarr; <span class="route-part">${locatie(o.naar_land, o.naar_postcode, o.naar_plaats)}</span></td>
-      <td>${periode(o.laaddatum_van, o.laaddatum_tot)}</td>
-      <td>${periode(o.losdatum_van, o.losdatum_tot)}</td>
+      <td>${periode(o.laaddatum_van, o.laaddatum_tot)}${(o.laadtijd_van||o.laadtijd_tot) ? '<br><small>' + esc(o.laadtijd_van||'') + (o.laadtijd_tot ? ' &ndash; ' + esc(o.laadtijd_tot) : '') + '</small>' : ''}</td>
+      <td>${periode(o.losdatum_van, o.losdatum_tot)}${(o.lostijd_van||o.lostijd_tot) ? '<br><small>' + esc(o.lostijd_van||'') + (o.lostijd_tot ? ' &ndash; ' + esc(o.lostijd_tot) : '') + '</small>' : ''}</td>
       <td>${esc(o.laadmeter)} lm</td>
       <td>${esc(o.hoogte)} m</td>
       <td>${o.gewicht ? esc(o.gewicht) + ' t' : '-'}</td>
@@ -482,21 +482,21 @@ function nieuwFormBody(modus, bedrijfNaam) {
     <div class="form-row two-col">
       <div>
         <label>Laaddatum van</label>
-        <input type="date" name="laaddatum_van" required>
+        <input type="date" name="laaddatum_van" required><label>Openingstijd van (optioneel)</label><input type="time" name="laadtijd_van">
       </div>
       <div>
         <label>Laaddatum tot (optioneel)</label>
-        <input type="date" name="laaddatum_tot">
+        <input type="date" name="laaddatum_tot"><label>Openingstijd tot (optioneel)</label><input type="time" name="laadtijd_tot">
       </div>
     </div>
     <div class="form-row two-col">
       <div>
         <label>Losdatum van</label>
-        <input type="date" name="losdatum_van" required>
+        <input type="date" name="losdatum_van" required><label>Openingstijd van (optioneel)</label><input type="time" name="lostijd_van">
       </div>
       <div>
         <label>Losdatum tot (optioneel)</label>
-        <input type="date" name="losdatum_tot">
+        <input type="date" name="losdatum_tot"><label>Openingstijd tot (optioneel)</label><input type="time" name="lostijd_tot">
       </div>
     </div>
     <div class="form-row">
@@ -590,19 +590,19 @@ app.post('/nieuw', requireLogin, ah(async (req, res) => {
     telefoon: req.body.telefoon || '',
     email: req.body.email || '',
     status: 'open',
-    bedrijf_id: req.bedrijf.id,
+    bedrijf_id: req.bedrijf.id, laadtijd_van: req.body.laadtijd_van || '', laadtijd_tot: req.body.laadtijd_tot || '', lostijd_van: req.body.lostijd_van || '', lostijd_tot: req.body.lostijd_tot || '',
   };
 
   await pool.query(
     `INSERT INTO offers (id, type, van_land, van_postcode, van_plaats, naar_land, naar_postcode, naar_plaats,
       laaddatum_van, laaddatum_tot, losdatum_van, losdatum_tot, laadmeter, hoogte, gewicht,
-      type_lading, opmerking, bedrijf, contactpersoon, telefoon, email, status, bedrijf_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
+      type_lading, opmerking, bedrijf, contactpersoon, telefoon, email, status, bedrijf_id, laadtijd_van, laadtijd_tot, lostijd_van, lostijd_tot)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)`,
     [offer.id, offer.type, offer.van_land, offer.van_postcode, offer.van_plaats,
      offer.naar_land, offer.naar_postcode, offer.naar_plaats,
      offer.laaddatum_van, offer.laaddatum_tot, offer.losdatum_van, offer.losdatum_tot,
      offer.laadmeter, offer.hoogte, offer.gewicht, offer.type_lading, offer.opmerking,
-     offer.bedrijf, offer.contactpersoon, offer.telefoon, offer.email, offer.status, offer.bedrijf_id]
+     offer.bedrijf, offer.contactpersoon, offer.telefoon, offer.email, offer.status, offer.bedrijf_id, offer.laadtijd_van, offer.laadtijd_tot, offer.lostijd_van, offer.lostijd_tot]
   );
 
   const body = `
@@ -666,21 +666,21 @@ app.get('/aanbieding/:id', requireLogin, ah(async (req, res) => {
       <div class="form-row two-col">
         <div>
           <label>Laaddatum van</label>
-          <input type="date" name="laaddatum_van" required value="${esc(offer.laaddatum_van)}">
+          <input type="date" name="laaddatum_van" required value="${esc(offer.laaddatum_van)}"><label>Openingstijd van (optioneel)</label><input type="time" name="laadtijd_van" value="${esc(offer.laadtijd_van)}">
         </div>
         <div>
           <label>Laaddatum tot (optioneel)</label>
-          <input type="date" name="laaddatum_tot" value="${esc(offer.laaddatum_tot)}">
+          <input type="date" name="laaddatum_tot" value="${esc(offer.laaddatum_tot)}"><label>Openingstijd tot (optioneel)</label><input type="time" name="laadtijd_tot" value="${esc(offer.laadtijd_tot)}">
         </div>
       </div>
       <div class="form-row two-col">
         <div>
           <label>Losdatum van</label>
-          <input type="date" name="losdatum_van" required value="${esc(offer.losdatum_van)}">
+          <input type="date" name="losdatum_van" required value="${esc(offer.losdatum_van)}"><label>Openingstijd van (optioneel)</label><input type="time" name="lostijd_van" value="${esc(offer.lostijd_van)}">
         </div>
         <div>
           <label>Losdatum tot (optioneel)</label>
-          <input type="date" name="losdatum_tot" value="${esc(offer.losdatum_tot)}">
+          <input type="date" name="losdatum_tot" value="${esc(offer.losdatum_tot)}"><label>Openingstijd tot (optioneel)</label><input type="time" name="lostijd_tot" value="${esc(offer.lostijd_tot)}">
         </div>
       </div>
       <div class="form-row">
@@ -777,12 +777,12 @@ app.post('/aanbieding/:id/bewerken', requireLogin, ah(async (req, res) => {
     `UPDATE offers SET type=$1, status = CASE WHEN status = 'vervuld' AND COALESCE(NULLIF($11,''), $10)::date >= CURRENT_DATE THEN 'open' ELSE status END, van_land=$2, van_postcode=$3, van_plaats=$4, naar_land=$5, naar_postcode=$6,
       naar_plaats=$7, laaddatum_van=$8, laaddatum_tot=$9, losdatum_van=$10, losdatum_tot=$11, laadmeter=$12,
       hoogte=$13, gewicht=$14, type_lading=$15, opmerking=$16, bedrijf=$17, contactpersoon=$18, telefoon=$19,
-      email=$20 WHERE id=$21`,
+      email=$20, laadtijd_van=$22, laadtijd_tot=$23, lostijd_van=$24, lostijd_tot=$25 WHERE id=$21`,
     [bijgewerkt.type, bijgewerkt.van_land, bijgewerkt.van_postcode, bijgewerkt.van_plaats,
      bijgewerkt.naar_land, bijgewerkt.naar_postcode, bijgewerkt.naar_plaats,
      bijgewerkt.laaddatum_van, bijgewerkt.laaddatum_tot, bijgewerkt.losdatum_van, bijgewerkt.losdatum_tot,
      bijgewerkt.laadmeter, bijgewerkt.hoogte, bijgewerkt.gewicht, bijgewerkt.type_lading, bijgewerkt.opmerking,
-     bijgewerkt.bedrijf, bijgewerkt.contactpersoon, bijgewerkt.telefoon, bijgewerkt.email, offer.id]
+     bijgewerkt.bedrijf, bijgewerkt.contactpersoon, bijgewerkt.telefoon, bijgewerkt.email, req.body.laadtijd_van || '', req.body.laadtijd_tot || '', req.body.lostijd_van || '', req.body.lostijd_tot || '', offer.id]
   );
 
   res.redirect('/overzicht');
