@@ -54,7 +54,7 @@ async function migreer() {
       geplaatst_op TIMESTAMPTZ DEFAULT now()
     );
   `);
-  await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS bedrijf_id TEXT`); await pool.query(`CREATE TABLE IF NOT EXISTS archief (id TEXT PRIMARY KEY, type TEXT, van_land TEXT, van_postcode TEXT, van_plaats TEXT, naar_land TEXT, naar_postcode TEXT, naar_plaats TEXT, laaddatum_van TEXT, laaddatum_tot TEXT, losdatum_van TEXT, losdatum_tot TEXT, laadmeter TEXT, hoogte TEXT, gewicht TEXT, type_lading TEXT, opmerking TEXT, bedrijf TEXT, contactpersoon TEXT, telefoon TEXT, email TEXT, bedrijf_id TEXT, online_sinds TIMESTAMPTZ, offline_sinds TIMESTAMPTZ NOT NULL DEFAULT now())`);
+  await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS bedrijf_id TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS laadtijd_van TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS laadtijd_tot TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS lostijd_van TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS lostijd_tot TEXT`); await pool.query(`CREATE TABLE IF NOT EXISTS archief (id TEXT PRIMARY KEY, type TEXT, van_land TEXT, van_postcode TEXT, van_plaats TEXT, naar_land TEXT, naar_postcode TEXT, naar_plaats TEXT, laaddatum_van TEXT, laaddatum_tot TEXT, losdatum_van TEXT, losdatum_tot TEXT, laadmeter TEXT, hoogte TEXT, gewicht TEXT, type_lading TEXT, opmerking TEXT, bedrijf TEXT, contactpersoon TEXT, telefoon TEXT, email TEXT, bedrijf_id TEXT, online_sinds TIMESTAMPTZ, offline_sinds TIMESTAMPTZ NOT NULL DEFAULT now())`);
   // koppel bestaande aanbiedingen (zonder eigenaar) op basis van bedrijfsnaam, zodat oude data niet wees wordt
   await pool.query(`
     UPDATE offers o SET bedrijf_id = c.id
