@@ -833,7 +833,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
 
   const rows = companies.map(c => `
     <tr>
-      <td>${esc(c.naam)}</td>
+      <td><form method="post" action="/admin/bedrijven/${c.id}/bewerken" style="display:flex;gap:6px;"><input type="text" name="naam" value="${esc(c.naam)}" required style="width:150px;"><button type="submit">Wijzigen</button></form></td>
       <td><span class="code">${esc(c.code)}</span>${c.id === nieuwId ? ' <strong style="color:#012750;">(nieuw)</strong>' : ''}</td>
       <td>${c.actief ? 'Actief' : 'Ingetrokken'}</td>
       <td>${esc(String(c.aangemaakt_op).slice(0, 10))}</td>
@@ -922,7 +922,7 @@ app.post('/admin/bedrijven', requireAdmin, ah(async (req, res) => {
   res.redirect(`/admin?nieuw=${id}`);
 }));
 
-app.post('/admin/bedrijven/:id/toggle', requireAdmin, ah(async (req, res) => {
+app.post('/admin/bedrijven/:id/bewerken', requireAdmin, ah(async (req, res) => { const naam = (req.body.naam || '').trim(); if (!naam) return res.redirect('/admin'); await pool.query('UPDATE companies SET naam = $1 WHERE id = $2', [naam, req.params.id]); res.redirect('/admin'); })); app.post('/admin/bedrijven/:id/toggle', requireAdmin, ah(async (req, res) => {
   await pool.query('UPDATE companies SET actief = NOT actief WHERE id = $1', [req.params.id]);
   res.redirect('/admin');
 }));
