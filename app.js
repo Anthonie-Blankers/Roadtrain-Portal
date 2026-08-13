@@ -137,7 +137,7 @@ async function archiveerAanbieding(offer) { await pool.query(`INSERT INTO archie
     .replace(/"/g, '&quot;');
 }
 
-function landOptions(selected, metAlle) {
+function buildMailOverzicht(offers) { const actueel = offers.filter(o => o.status !== 'vervuld'); actueel.sort((a, b) => new Date(a.laaddatum_van) - new Date(b.laaddatum_van)); function fmtD(d) { const p = (d || '').split('-'); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : (d || ''); } function periodeTekst(van_, tot_) { if (!van_) return '-'; if (!tot_ || tot_ === van_) return fmtD(van_); return `${fmtD(van_)} t/m ${fmtD(tot_)}`; } function regel(o) { const regel1 = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`; const details = [`Laden: ${periodeTekst(o.laaddatum_van, o.laaddatum_tot)}`, `Lossen: ${periodeTekst(o.losdatum_van, o.losdatum_tot)}`, `${o.laadmeter} lm`, `${o.hoogte} m`]; if (o.gewicht) details.push(`${o.gewicht} t`); const contact = [o.bedrijf, o.contactpersoon, o.telefoon].filter(Boolean).join(' - '); return regel1 + String.fromCharCode(13, 10) + details.join(' | ') + (contact ? ' | ' + contact : ''); } const vracht = actueel.filter(o => o.type === 'vracht'); const ruimte = actueel.filter(o => o.type !== 'vracht'); const nl = String.fromCharCode(13, 10); const lines = []; [['VRACHT BESCHIKBAAR', vracht], ['CAPACITEIT BESCHIKBAAR', ruimte]].forEach(([titel, lijst]) => { if (!lijst.length) return; lines.push(titel); lines.push(''); lijst.forEach(o => { lines.push(regel(o)); lines.push(''); }); }); const tekst = lines.join(nl).trim(); const onderwerp = `Actuele aanbiedingen CombiMatch - ${new Date().toLocaleDateString('nl-NL')}`; const mailtoUrl = `mailto:?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(tekst)}`; return { aantal: actueel.length, onderwerp, tekst, mailtoUrl, teLang: mailtoUrl.length > 1800 }; } function landOptions(selected, metAlle) {
   let opts = metAlle ? `<option value="alle" ${selected === 'alle' ? 'selected' : ''}>Alle landen</option>` : '';
   opts += LANDEN.map(([code, naam]) =>
     `<option value="${code}" ${selected === code ? 'selected' : ''}>${code} - ${naam}</option>`
@@ -829,7 +829,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
   companies.sort((a, b) => new Date(b.aangemaakt_op) - new Date(a.aangemaakt_op));
   const nieuwId = req.query.nieuw;
 
-  const { rows: weesAanbiedingen } = await pool.query('SELECT * FROM offers WHERE bedrijf_id IS NULL');
+  const { rows: weesAanbiedingen } = await pool.query('SELECT * FROM offers WHERE bedrijf_id IS NULL'); const { rows: alleAanbiedingen } = await pool.query('SELECT * FROM offers'); const mailOverzicht = buildMailOverzicht(alleAanbiedingen);
 
   const rows = companies.map(c => `
     <tr>
@@ -891,12 +891,12 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
   </form>
   ` : ''}
 
-  <p style="margin-top:20px;"><a href="/admin/archief">Archief bekijken</a> &middot; <a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
+  <p style="margin-top:20px;">${mailOverzicht.aantal ? (mailOverzicht.teLang ? `<a href="/admin/mail-overzicht-tekst">Overzicht kopiëren voor mail (${mailOverzicht.aantal})</a>` : `<a href="${esc(mailOverzicht.mailtoUrl)}">Verstuur overzicht per mail (${mailOverzicht.aantal})</a>`) : 'Geen actuele aanbiedingen om te versturen'} &middot; <a href="/admin/archief">Archief bekijken</a> &middot; <a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
   `;
   res.send(layout(req, 'Combi-Match - Beheer', body));
 }));
 
-app.post('/admin/aanbiedingen/opschonen', requireAdmin, ah(async (req, res) => {
+app.get('/admin/mail-overzicht-tekst', requireAdmin, ah(async (req, res) => { const { rows: alleAanbiedingen } = await pool.query('SELECT * FROM offers'); const mo = buildMailOverzicht(alleAanbiedingen); const body = `<h1>Overzicht per mail</h1><p class="form-intro">De lijst (${mo.aantal} aanbiedingen) is te lang voor een directe mail-link. Kopieer onderstaande tekst en plak in een nieuwe mail.</p><p><strong>Onderwerp:</strong> ${esc(mo.onderwerp)}</p><textarea readonly style="width:100%;height:400px;">${esc(mo.tekst)}</textarea><p style="margin-top:20px;"><a href="/admin">Terug naar beheer</a></p>`; res.send(layout(req, 'Combi-Match - Overzicht per mail', body)); })); app.post('/admin/aanbiedingen/opschonen', requireAdmin, ah(async (req, res) => {
   const { rows: teArchiveren } = await pool.query('SELECT * FROM offers WHERE bedrijf_id IS NULL'); for (const o of teArchiveren) { await archiveerAanbieding(o); } await pool.query('DELETE FROM offers WHERE bedrijf_id IS NULL');
   res.redirect('/admin');
 }));
