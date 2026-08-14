@@ -424,7 +424,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
 
 // ---------- nieuwe aanbieding: gedeelde formulier-renderer ----------
 function nieuwFormBody(modus, bedrijfNaam) {
-  const isCapaciteit = modus === 'capaciteit';
+  const isCapaciteit = modus === 'capaciteit'; const vandaag = new Date().toISOString().slice(0, 10);
   const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
   const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
   const intro = isCapaciteit
@@ -482,13 +482,13 @@ function nieuwFormBody(modus, bedrijfNaam) {
     <div class="form-row two-col">
       <div>
         <label>Laaddatum van</label>
-        <input type="date" name="laaddatum_van" required></div><div class="form-row two-col" style="flex-direction:row;"><div><label>Openingstijd van</label><input type="time" name="laadtijd_van"></div><div><label>tot (optioneel)</label><input type="time" name="laadtijd_tot"></div></div><div><label>Laaddatum tot (optioneel)</label><input type="date" name="laaddatum_tot">
+        <input type="date" name="laaddatum_van" required value="${vandaag}"></div><div class="form-row two-col" style="flex-direction:row;"><div><label>Openingstijd van</label><input type="time" name="laadtijd_van"></div><div><label>tot (optioneel)</label><input type="time" name="laadtijd_tot"></div></div><div><label>Laaddatum tot (optioneel)</label><input type="date" name="laaddatum_tot">
       </div>
     </div>
     <div class="form-row two-col">
       <div>
         <label>Losdatum van</label>
-        <input type="date" name="losdatum_van" required></div><div class="form-row two-col" style="flex-direction:row;"><div><label>Openingstijd van</label><input type="time" name="lostijd_van"></div><div><label>tot (optioneel)</label><input type="time" name="lostijd_tot"></div></div><div><label>Losdatum tot (optioneel)</label><input type="date" name="losdatum_tot">
+        <input type="date" name="losdatum_van" required value="${vandaag}"></div><div class="form-row two-col" style="flex-direction:row;"><div><label>Openingstijd van</label><input type="time" name="lostijd_van"></div><div><label>tot (optioneel)</label><input type="time" name="lostijd_tot"></div></div><div><label>Losdatum tot (optioneel)</label><input type="date" name="losdatum_tot">
       </div>
     </div>
     <div class="form-row">
