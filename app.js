@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
-const { Pool } = require('pg');
+const { Pool } = require('pg'); // redeploy
 
 const app = express(); app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
