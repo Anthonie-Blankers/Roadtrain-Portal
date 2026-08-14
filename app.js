@@ -173,7 +173,7 @@ function layout(req, title, body, opts = {}) {
 ${body}
 </main>
 <footer class="wrap footer">
-  <p>CombiMatch &ndash; The Roadtrain Exchange verbindt vervoerders met (volume)combi's & LZV's van alle types. Via &eacute;&eacute;n platform deel je eenvoudig beschikbare capaciteit, vind je passende vrachten en werk je samen met betrouwbare transportpartners. Zo verhogen we samen de beladingsgraad, beperken we lege kilometers en maken we transport slimmer, duurzamer en rendabeler.</p>
+  <p style="font-weight:600;color:var(--blauw);margin-bottom:6px;">CombiMatch &ndash; The Roadtrain Exchange</p><p>Het samenwerkingsplatform voor vervoerders met (volume)combi's en LZV's.<br>Minder lege kilometers. Meer samenwerking. Betere benutting van capaciteit.</p><p style="margin-top:8px;font-size:0.72rem;">Ontwikkeld in 2026 door Anthonie Blankers vanuit de dagelijkse praktijk van Blankers Transport.</p>
   <p style="margin-top:8px;"><a href="/admin/login" style="color:var(--grijs);font-size:0.75rem;">Beheer</a></p>
 </footer>
 </body>
