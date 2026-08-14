@@ -218,7 +218,7 @@ table.offers.aanbiedingen th:nth-child(4), table.offers.aanbiedingen td:nth-chil
 table.offers.aanbiedingen th:nth-child(8), table.offers.aanbiedingen td:nth-child(8) { width: 15%; }
 table.offers.aanbiedingen th:nth-child(9), table.offers.aanbiedingen td:nth-child(9) { width: 15%; }
 table.offers.aanbiedingen th:nth-child(10), table.offers.aanbiedingen td:nth-child(10) { width: 7%; } table.offers.archief th:nth-child(1), table.offers.archief td:nth-child(1) { width: 5%; } table.offers.archief th:nth-child(2), table.offers.archief td:nth-child(2) { width: 22%; } table.offers.archief th:nth-child(3), table.offers.archief td:nth-child(3) { width: 8%; } table.offers.archief th:nth-child(4), table.offers.archief td:nth-child(4) { width: 8%; } table.offers.archief th:nth-child(5), table.offers.archief td:nth-child(5) { width: 6%; } table.offers.archief th:nth-child(6), table.offers.archief td:nth-child(6) { width: 6%; } table.offers.archief th:nth-child(7), table.offers.archief td:nth-child(7) { width: 5%; } table.offers.archief th:nth-child(8), table.offers.archief td:nth-child(8) { width: 13%; } table.offers.archief th:nth-child(9), table.offers.archief td:nth-child(9) { width: 13%; } table.offers.archief th:nth-child(10), table.offers.archief td:nth-child(10) { width: 7%; } table.offers.archief th:nth-child(11), table.offers.archief td:nth-child(11) { width: 7%; }
-.route-part { white-space: nowrap; }
+.route-part { white-space: normal; }
 
 /* kolombreedtes voor het beheer-overzicht van bedrijven (5 kolommen, ruimere actiekolom) */
 table.offers.bedrijven th:nth-child(1), table.offers.bedrijven td:nth-child(1) { width: 28%; }
