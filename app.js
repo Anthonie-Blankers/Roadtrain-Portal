@@ -310,9 +310,12 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
         <span class="ritregel-route">${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</span>
         ${r.opmerking ? `<span class="ritregel-opmerking">${esc(r.opmerking)}</span>` : ''}
       </div>
-      <form method="post" action="/mijn-bedrijf/ritregels/${r.id}/verwijderen" onsubmit="return confirm('Deze ritregel verwijderen?')">
-        <button type="submit" class="link-danger">Verwijderen</button>
-      </form>
+      <div class="ritregel-acties">
+        <a href="/mijn-bedrijf/ritregels/${r.id}/bewerken" class="link-muted">Bewerken</a>
+        <form method="post" action="/mijn-bedrijf/ritregels/${r.id}/verwijderen" onsubmit="return confirm('Deze ritregel verwijderen?')">
+          <button type="submit" class="link-danger">Verwijderen</button>
+        </form>
+      </div>
     </div>`).join('');
 
   const toevoegFormulier = ritregels.length >= 4 ? `<p class="form-intro">Je hebt het maximum van 4 ritregels bereikt. Verwijder een regel om een nieuwe toe te voegen.</p>` : `
@@ -413,6 +416,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
   <div class="ritregel-lijst">
     ${ritregelRijen || '<p class="form-intro">Nog geen ritregels toegevoegd.</p>'}
   </div>
+  <h3 class="ritregel-nieuw-kop">Nieuwe ritregel toevoegen</h3>
   ${toevoegFormulier}
   `;
 
@@ -451,6 +455,60 @@ app.post('/mijn-bedrijf/ritregels/:id/toggle', requireLogin, ah(async (req, res)
 
 app.post('/mijn-bedrijf/ritregels/:id/verwijderen', requireLogin, ah(async (req, res) => {
   await pool.query('DELETE FROM ritregels WHERE id = $1 AND bedrijf_id = $2', [req.params.id, req.bedrijf.id]);
+  res.redirect('/mijn-bedrijf');
+}));
+
+app.get('/mijn-bedrijf/ritregels/:id/bewerken', requireLogin, ah(async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM ritregels WHERE id = $1', [req.params.id]);
+  const r = rows[0];
+  if (!r) return res.status(404).send(layout(req, 'Niet gevonden', '<p>Ritregel niet gevonden. <a href="/mijn-bedrijf">Terug</a></p>'));
+  if (r.bedrijf_id !== req.bedrijf.id) return res.status(403).send(layout(req, 'Geen toegang', '<p>Je hebt geen toegang tot deze ritregel. <a href="/mijn-bedrijf">Terug naar Mijn bedrijf</a></p>'));
+  const body = `
+  <h1>Ritregel bewerken</h1>
+  <form class="offer-form" method="post" action="/mijn-bedrijf/ritregels/${r.id}/bewerken">
+    <div class="form-row two-col">
+      <div>
+        <label>Type</label>
+        <select name="type" required>
+          <option value="vracht" ${r.type === 'vracht' ? 'selected' : ''}>Zoekt vracht</option>
+          <option value="ruimte" ${r.type === 'ruimte' ? 'selected' : ''}>Zoekt combi</option>
+        </select>
+      </div>
+      <div>
+        <label>Opmerking (optioneel)</label>
+        <input type="text" name="opmerking" value="${esc(r.opmerking || '')}" placeholder="bijv. meestal op donderdagen">
+      </div>
+    </div>
+    <div class="form-row two-col">
+      <div>
+        <label>Regio van</label>
+        <select name="regio_van" required>${landOptions(r.regio_van, false)}</select>
+      </div>
+      <div>
+        <label>Regio naar</label>
+        <select name="regio_naar" required>${landOptions(r.regio_naar, false)}</select>
+      </div>
+    </div>
+    <div class="form-row">
+      <button type="submit">Wijzigingen opslaan</button>
+    </div>
+  </form>
+  <p style="margin-top:16px;"><a href="/mijn-bedrijf">Terug naar Mijn bedrijf</a></p>
+  `;
+  res.send(layout(req, 'Combi-Match - Ritregel bewerken', body));
+}));
+
+app.post('/mijn-bedrijf/ritregels/:id/bewerken', requireLogin, ah(async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM ritregels WHERE id = $1', [req.params.id]);
+  const r = rows[0];
+  if (!r || r.bedrijf_id !== req.bedrijf.id) {
+    return res.status(403).send(layout(req, 'Geen toegang', '<p>Je hebt geen toegang tot deze ritregel. <a href="/mijn-bedrijf">Terug naar Mijn bedrijf</a></p>'));
+  }
+  const type = req.body.type === 'ruimte' ? 'ruimte' : 'vracht';
+  await pool.query(
+    'UPDATE ritregels SET type=$1, regio_van=$2, regio_naar=$3, opmerking=$4 WHERE id=$5',
+    [type, req.body.regio_van || '', req.body.regio_naar || '', req.body.opmerking || '', r.id]
+  );
   res.redirect('/mijn-bedrijf');
 }));
 
@@ -515,19 +573,37 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     return `${esc(fmt(van_))}<br>&ndash; ${esc(fmt(tot_))}`;
   }
 
-  function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join(String.fromCharCode(13,10)); } function mailtoLink(o) { const onderwerp = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats} - Via CombiMatch`; return `mailto:${o.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(mailtoBody(o))}`; }  const { rows: ritregels } = await pool.query(`
-    SELECT r.*, c.naam AS bedrijf_naam FROM ritregels r
+  function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join(String.fromCharCode(13,10)); } function mailtoLink(o) { const onderwerp = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats} - Via CombiMatch`; return `mailto:${o.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(mailtoBody(o))}`; }  function ritregelMailtoBody(r) {
+    const doel = r.type === 'vracht' ? 'op zoek naar vracht' : 'op zoek naar combi-capaciteit';
+    const regels = ['Geachte heer/mevrouw,', '', `Ik zag dat jullie structureel ${doel} zijn van ${landNaam(r.regio_van)} naar ${landNaam(r.regio_naar)}.`, '', 'Is dit nog actueel?'];
+    if (r.opmerking) regels.push('', `Opmerking: ${r.opmerking}`);
+    return regels.join(String.fromCharCode(13, 10));
+  }
+  function ritregelMailtoLink(r, email) {
+    const onderwerp = `${landNaam(r.regio_van)} -> ${landNaam(r.regio_naar)} - Via CombiMatch`;
+    return `mailto:${email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(ritregelMailtoBody(r))}`;
+  }
+  const { rows: ritregels } = await pool.query(`
+    SELECT r.*, c.naam AS bedrijf_naam, c.algemeen_email AS bedrijf_algemeen_email, c.contactpersoon_email AS bedrijf_contactpersoon_email
+    FROM ritregels r
     JOIN companies c ON c.id = r.bedrijf_id
     WHERE r.actief = true AND c.actief = true
     ORDER BY r.aangemaakt_op DESC
   `);
-  const ritregelRows = ritregels.map(r => `
+  const ritregelRows = ritregels.map(r => {
+    const email = r.bedrijf_algemeen_email || r.bedrijf_contactpersoon_email || '';
+    const actie = r.bedrijf_id === req.bedrijf.id
+      ? `<a href="/mijn-bedrijf/ritregels/${r.id}/bewerken" class="beheer-icon" title="Bewerken"><img src="/icon-dark.png" alt="Bewerken" class="beheer-icon-img"></a>`
+      : (email ? `<a href="${esc(ritregelMailtoLink(r, email))}" class="beheer-icon" title="Mail sturen naar ${esc(r.bedrijf_naam)}"><img src="/icon-white.png" alt="Mail sturen" class="beheer-icon-img"></a>` : `<img src="/icon-white.png" alt="" class="beheer-icon-img beheer-icon-inactive">`);
+    return `
     <tr>
       <td>${ritregelBadge(r.type)}</td>
       <td>${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</td>
       <td>${r.opmerking ? esc(r.opmerking) : '-'}</td>
       <td>${esc(r.bedrijf_naam)}</td>
-    </tr>`).join('');
+      <td>${actie}</td>
+    </tr>`;
+  }).join('');
 
   const rows = filtered.map(o => `
     <tr class="${o.status === 'vervuld' ? 'vervuld' : ''}">
@@ -636,10 +712,10 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   <p class="form-intro">Bedrijven die structureel op zoek zijn naar dit soort ritten, ongeacht een actuele aanbieding.</p>
   <table class="offers ritregels">
     <thead>
-      <tr><th>Type</th><th>Regio</th><th>Opmerking</th><th>Bedrijf</th></tr>
+      <tr><th>Type</th><th>Regio</th><th>Opmerking</th><th>Bedrijf</th><th>Actie</th></tr>
     </thead>
     <tbody>
-      ${ritregelRows || '<tr><td colspan="4" class="empty">Nog geen ritregels geplaatst.</td></tr>'}
+      ${ritregelRows || '<tr><td colspan="5" class="empty">Nog geen ritregels geplaatst.</td></tr>'}
     </tbody>
   </table>
   `;
