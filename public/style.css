@@ -275,6 +275,37 @@ table.offers tr.vervuld { opacity: 0.5; }
           font-weight: 700;
 }
 
+.badge-ritregel { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 600; }
+.badge-ritregel-vracht { background: #fdf1de; color: #7a4a00; border: 1px solid var(--geel); }
+.badge-ritregel-ruimte { background: var(--blauw-licht); color: var(--blauw); border: 1px solid var(--blauw); }
+
+.ritregel-lijst { max-width: 860px; margin-bottom: 16px; }
+.ritregel-rij { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: white; border: 1px solid var(--rand); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 0.85rem; }
+.ritregel-rij-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ritregel-rij-info form { display: inline-flex; }
+.ritregel-route { color: var(--blauw); font-weight: 600; }
+.ritregel-opmerking { color: var(--grijs); }
+.link-danger { background: none; border: none; color: #a32d2d; font-size: 0.8rem; cursor: pointer; text-decoration: underline; padding: 0; }
+.link-danger:hover { background: none; color: #7a1f1f; }
+
+.toggle-btn { width: 32px; height: 18px; border-radius: 10px; border: none; padding: 0; position: relative; cursor: pointer; flex-shrink: 0; }
+.toggle-btn.aan { background: #639922; }
+.toggle-btn.uit { background: var(--rand); }
+.toggle-btn.aan:hover { background: #639922; }
+.toggle-btn.uit:hover { background: var(--rand); }
+.toggle-btn span { display: block; width: 14px; height: 14px; border-radius: 50%; background: #fff; position: absolute; top: 2px; transition: left 0.15s; }
+.toggle-btn.aan span { left: 16px; }
+.toggle-btn.uit span { left: 2px; }
+
+.materieel-opties { display: flex; gap: 16px; flex-wrap: wrap; }
+.materieel-optie { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 0.9rem; }
+
+/* kolombreedtes voor de ritregels-tabel (4 kolommen) */
+table.offers.ritregels th:nth-child(1), table.offers.ritregels td:nth-child(1) { width: 14%; }
+table.offers.ritregels th:nth-child(2), table.offers.ritregels td:nth-child(2) { width: 26%; }
+table.offers.ritregels th:nth-child(3), table.offers.ritregels td:nth-child(3) { width: 35%; }
+table.offers.ritregels th:nth-child(4), table.offers.ritregels td:nth-child(4) { width: 25%; }
+
 .footer {
           text-align: center;
           color: var(--grijs);
