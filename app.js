@@ -55,6 +55,32 @@ async function migreer() {
     );
   `);
   await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS bedrijf_id TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS laadtijd_van TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS laadtijd_tot TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS lostijd_van TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS lostijd_tot TEXT`); await pool.query(`CREATE TABLE IF NOT EXISTS archief (id TEXT PRIMARY KEY, type TEXT, van_land TEXT, van_postcode TEXT, van_plaats TEXT, naar_land TEXT, naar_postcode TEXT, naar_plaats TEXT, laaddatum_van TEXT, laaddatum_tot TEXT, losdatum_van TEXT, losdatum_tot TEXT, laadmeter TEXT, hoogte TEXT, gewicht TEXT, type_lading TEXT, opmerking TEXT, bedrijf TEXT, contactpersoon TEXT, telefoon TEXT, email TEXT, bedrijf_id TEXT, online_sinds TIMESTAMPTZ, offline_sinds TIMESTAMPTZ NOT NULL DEFAULT now())`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS adres TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS postcode TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS plaats TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS land TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS contactpersoon_naam TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS contactpersoon_telefoon TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS contactpersoon_email TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS algemeen_telefoon TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS algemeen_email TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS website TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS kvk TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS omschrijving TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS materieel TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS materieel_anders TEXT`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ritregels (
+      id TEXT PRIMARY KEY,
+      bedrijf_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      regio_van TEXT,
+      regio_naar TEXT,
+      opmerking TEXT,
+      actief BOOLEAN NOT NULL DEFAULT true,
+      aangemaakt_op TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
   // koppel bestaande aanbiedingen (zonder eigenaar) op basis van bedrijfsnaam, zodat oude data niet wees wordt
   await pool.query(`
     UPDATE offers o SET bedrijf_id = c.id
@@ -145,6 +171,18 @@ function buildMailOverzicht(offers) { const actueel = offers.filter(o => o.statu
   return opts;
 }
 
+function landWeergave(code) {
+  if (!code) return '-';
+  const bekend = LANDEN.some(x => x[0] === code);
+  return bekend ? '<span class="fi fi-' + code.toLowerCase() + '"></span> ' + esc(landNaam(code)) : esc(code);
+}
+
+function ritregelBadge(type) {
+  return type === 'vracht'
+    ? '<span class="badge-ritregel badge-ritregel-vracht">Zoekt vracht</span>'
+    : '<span class="badge-ritregel badge-ritregel-ruimte">Zoekt combi</span>';
+}
+
 // ---------- layout ----------
 function layout(req, title, body, opts = {}) {
   const bedrijf = req ? req.ingelogdBedrijf : null;
@@ -165,7 +203,7 @@ function layout(req, title, body, opts = {}) {
       <a href="/overzicht">Overzicht</a>
       <a href="/nieuw/vracht">Vracht aanbieden</a>
       <a href="/nieuw/capaciteit">Capaciteit aanbieden</a>
-      ${bedrijf ? `<a href="/uitloggen">Uitloggen (${esc(bedrijf.naam)})</a>` : `<a href="/login">Inloggen</a>`}
+      ${bedrijf ? `<a href="/mijn-bedrijf">Mijn bedrijf</a> <a href="/uitloggen">Uitloggen (${esc(bedrijf.naam)})</a>` : `<a href="/login">Inloggen</a>`}
     </nav>
   </div>
 </header>
@@ -254,6 +292,168 @@ app.get('/uitloggen', (req, res) => {
   res.redirect('/');
 });
 
+// ---------- mijn bedrijf: profiel + ritregels ----------
+app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM companies WHERE id = $1', [req.bedrijf.id]);
+  const c = rows[0];
+  const { rows: ritregels } = await pool.query('SELECT * FROM ritregels WHERE bedrijf_id = $1 ORDER BY aangemaakt_op ASC', [req.bedrijf.id]);
+  const opgeslagen = req.query.opgeslagen === '1';
+  const materieelWaarden = (c.materieel || '').split(',').filter(Boolean);
+
+  const ritregelRijen = ritregels.map(r => `
+    <div class="ritregel-rij">
+      <div class="ritregel-rij-info">
+        <form method="post" action="/mijn-bedrijf/ritregels/${r.id}/toggle">
+          <button type="submit" class="toggle-btn ${r.actief ? 'aan' : 'uit'}" title="${r.actief ? 'Zet uit' : 'Zet aan'}"><span></span></button>
+        </form>
+        ${ritregelBadge(r.type)}
+        <span class="ritregel-route">${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</span>
+        ${r.opmerking ? `<span class="ritregel-opmerking">${esc(r.opmerking)}</span>` : ''}
+      </div>
+      <form method="post" action="/mijn-bedrijf/ritregels/${r.id}/verwijderen" onsubmit="return confirm('Deze ritregel verwijderen?')">
+        <button type="submit" class="link-danger">Verwijderen</button>
+      </form>
+    </div>`).join('');
+
+  const toevoegFormulier = ritregels.length >= 4 ? `<p class="form-intro">Je hebt het maximum van 4 ritregels bereikt. Verwijder een regel om een nieuwe toe te voegen.</p>` : `
+    <form class="offer-form" method="post" action="/mijn-bedrijf/ritregels">
+      <div class="form-row two-col">
+        <div>
+          <label>Type</label>
+          <select name="type" required>
+            <option value="vracht">Zoekt vracht</option>
+            <option value="ruimte">Zoekt combi</option>
+          </select>
+        </div>
+        <div>
+          <label>Opmerking (optioneel)</label>
+          <input type="text" name="opmerking" placeholder="bijv. meestal op donderdagen">
+        </div>
+      </div>
+      <div class="form-row two-col">
+        <div>
+          <label>Regio van</label>
+          <select name="regio_van" required>${landOptions('NL', false)}</select>
+        </div>
+        <div>
+          <label>Regio naar</label>
+          <select name="regio_naar" required>${landOptions('NL', false)}</select>
+        </div>
+      </div>
+      <div class="form-row">
+        <button type="submit">Toevoegen</button>
+      </div>
+    </form>`;
+
+  const materieelCheckbox = (waarde, label) => `<label class="materieel-optie"><input type="checkbox" name="materieel" value="${waarde}" ${materieelWaarden.includes(waarde) ? 'checked' : ''}> ${label}</label>`;
+
+  const body = `
+  <h1>Mijn bedrijf &mdash; ${esc(c.naam)}</h1>
+  ${opgeslagen ? '<p style="color:#012750;font-weight:600;">Gegevens opgeslagen.</p>' : ''}
+  <p class="form-intro">Beheer hier je bedrijfsgegevens, materieel en vaste ritregels. Alles op deze pagina is optioneel, behalve de bedrijfsnaam.</p>
+
+  <h2>Bedrijfsgegevens</h2>
+  <form class="offer-form" method="post" action="/mijn-bedrijf/bewerken">
+    <div class="form-row">
+      <label>Bedrijfsnaam</label>
+      <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
+    </div>
+    <div class="form-row two-col">
+      <div><label>Adres (optioneel)</label><input type="text" name="adres" value="${esc(c.adres || '')}"></div>
+      <div><label>Postcode (optioneel)</label><input type="text" name="postcode" value="${esc(c.postcode || '')}"></div>
+    </div>
+    <div class="form-row two-col">
+      <div><label>Plaats (optioneel)</label><input type="text" name="plaats" value="${esc(c.plaats || '')}"></div>
+      <div><label>Land (optioneel)</label><select name="land">${landOptions(c.land, true)}</select></div>
+    </div>
+    <div class="form-row two-col">
+      <div><label>Contactpersoon &ndash; naam (optioneel)</label><input type="text" name="contactpersoon_naam" value="${esc(c.contactpersoon_naam || '')}"></div>
+      <div><label>Contactpersoon &ndash; telefoon (optioneel)</label><input type="text" name="contactpersoon_telefoon" value="${esc(c.contactpersoon_telefoon || '')}"></div>
+    </div>
+    <div class="form-row">
+      <label>Contactpersoon &ndash; e-mail (optioneel)</label>
+      <input type="email" name="contactpersoon_email" value="${esc(c.contactpersoon_email || '')}">
+    </div>
+    <div class="form-row two-col">
+      <div><label>Algemeen telefoonnummer (optioneel)</label><input type="text" name="algemeen_telefoon" value="${esc(c.algemeen_telefoon || '')}"></div>
+      <div><label>Algemeen e-mailadres (optioneel)</label><input type="email" name="algemeen_email" value="${esc(c.algemeen_email || '')}"></div>
+    </div>
+    <div class="form-row two-col">
+      <div><label>Website (optioneel)</label><input type="text" name="website" value="${esc(c.website || '')}"></div>
+      <div><label>KVK-nummer (optioneel)</label><input type="text" name="kvk" value="${esc(c.kvk || '')}"></div>
+    </div>
+    <div class="form-row">
+      <label>Korte omschrijving (optioneel)</label>
+      <input type="text" name="omschrijving" value="${esc(c.omschrijving || '')}" placeholder="bijv. Gespecialiseerd in gekoelde combi-transporten Nederland-Duitsland">
+    </div>
+
+    <h2 style="margin-top:24px;">Materieel en specialisatie</h2>
+    <div class="form-row">
+      <label>Type materieel dat we rijden (optioneel)</label>
+      <div class="materieel-opties">
+        ${materieelCheckbox('combi', 'Combi')}
+        ${materieelCheckbox('lzv', 'LZV')}
+        ${materieelCheckbox('koelvries', 'Koel/vries-combi')}
+        ${materieelCheckbox('standaard', 'Standaard trailer')}
+        ${materieelCheckbox('dubbeldekker', 'Dubbeldekker')}
+        ${materieelCheckbox('anders', 'Anders')}
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Toelichting bij &ldquo;Anders&rdquo; (optioneel)</label>
+      <input type="text" name="materieel_anders" value="${esc(c.materieel_anders || '')}" placeholder="bijv. tankcontainer-chassis">
+    </div>
+    <div class="form-row">
+      <button type="submit">Gegevens opslaan</button>
+    </div>
+  </form>
+
+  <h2 style="margin-top:32px;">Jouw ritregels (${ritregels.length}/4)</h2>
+  <p class="form-intro">Ritregels die aan staan, zijn zichtbaar voor andere bedrijven bij &ldquo;Vaker gezocht in deze regio&rdquo; op het overzicht.</p>
+  <div class="ritregel-lijst">
+    ${ritregelRijen || '<p class="form-intro">Nog geen ritregels toegevoegd.</p>'}
+  </div>
+  ${toevoegFormulier}
+  `;
+
+  res.send(layout(req, 'Combi-Match - Mijn bedrijf', body));
+}));
+
+app.post('/mijn-bedrijf/bewerken', requireLogin, ah(async (req, res) => {
+  const materieel = Array.isArray(req.body.materieel) ? req.body.materieel : (req.body.materieel ? [req.body.materieel] : []);
+  await pool.query(
+    `UPDATE companies SET adres=$1, postcode=$2, plaats=$3, land=$4, contactpersoon_naam=$5, contactpersoon_telefoon=$6,
+      contactpersoon_email=$7, algemeen_telefoon=$8, algemeen_email=$9, website=$10, kvk=$11, omschrijving=$12,
+      materieel=$13, materieel_anders=$14 WHERE id=$15`,
+    [req.body.adres || '', req.body.postcode || '', req.body.plaats || '', req.body.land || '',
+     req.body.contactpersoon_naam || '', req.body.contactpersoon_telefoon || '', req.body.contactpersoon_email || '',
+     req.body.algemeen_telefoon || '', req.body.algemeen_email || '', req.body.website || '', req.body.kvk || '',
+     req.body.omschrijving || '', materieel.join(','), req.body.materieel_anders || '', req.bedrijf.id]
+  );
+  res.redirect('/mijn-bedrijf?opgeslagen=1');
+}));
+
+app.post('/mijn-bedrijf/ritregels', requireLogin, ah(async (req, res) => {
+  const { rows: bestaande } = await pool.query('SELECT COUNT(*)::int AS n FROM ritregels WHERE bedrijf_id = $1', [req.bedrijf.id]);
+  if (bestaande[0].n >= 4) return res.redirect('/mijn-bedrijf');
+  const type = req.body.type === 'ruimte' ? 'ruimte' : 'vracht';
+  await pool.query(
+    'INSERT INTO ritregels (id, bedrijf_id, type, regio_van, regio_naar, opmerking, actief) VALUES ($1,$2,$3,$4,$5,$6,true)',
+    [crypto.randomUUID(), req.bedrijf.id, type, req.body.regio_van || '', req.body.regio_naar || '', req.body.opmerking || '']
+  );
+  res.redirect('/mijn-bedrijf');
+}));
+
+app.post('/mijn-bedrijf/ritregels/:id/toggle', requireLogin, ah(async (req, res) => {
+  await pool.query('UPDATE ritregels SET actief = NOT actief WHERE id = $1 AND bedrijf_id = $2', [req.params.id, req.bedrijf.id]);
+  res.redirect('/mijn-bedrijf');
+}));
+
+app.post('/mijn-bedrijf/ritregels/:id/verwijderen', requireLogin, ah(async (req, res) => {
+  await pool.query('DELETE FROM ritregels WHERE id = $1 AND bedrijf_id = $2', [req.params.id, req.bedrijf.id]);
+  res.redirect('/mijn-bedrijf');
+}));
+
 // overview + filters (login vereist)
 app.get('/overzicht', requireLogin, ah(async (req, res) => {
   const { rows: offers } = await pool.query('SELECT * FROM offers');
@@ -315,7 +515,21 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     return `${esc(fmt(van_))}<br>&ndash; ${esc(fmt(tot_))}`;
   }
 
-  function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join(String.fromCharCode(13,10)); } function mailtoLink(o) { const onderwerp = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats} - Via CombiMatch`; return `mailto:${o.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(mailtoBody(o))}`; }  const rows = filtered.map(o => `
+  function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join(String.fromCharCode(13,10)); } function mailtoLink(o) { const onderwerp = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats} - Via CombiMatch`; return `mailto:${o.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(mailtoBody(o))}`; }  const { rows: ritregels } = await pool.query(`
+    SELECT r.*, c.naam AS bedrijf_naam FROM ritregels r
+    JOIN companies c ON c.id = r.bedrijf_id
+    WHERE r.actief = true AND c.actief = true
+    ORDER BY r.aangemaakt_op DESC
+  `);
+  const ritregelRows = ritregels.map(r => `
+    <tr>
+      <td>${ritregelBadge(r.type)}</td>
+      <td>${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</td>
+      <td>${r.opmerking ? esc(r.opmerking) : '-'}</td>
+      <td>${esc(r.bedrijf_naam)}</td>
+    </tr>`).join('');
+
+  const rows = filtered.map(o => `
     <tr class="${o.status === 'vervuld' ? 'vervuld' : ''}">
       <td><span class="badge badge-${o.type}">${o.type === 'vracht' ? 'Vracht' : 'Combi vrij'}</span></td>
       <td><span class="route-part">${locatie(o.van_land, o.van_postcode, o.van_plaats)}</span> &rarr;<br><span class="route-part">${locatie(o.naar_land, o.naar_postcode, o.naar_plaats)}</span></td>
@@ -415,6 +629,17 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     </thead>
     <tbody>
       ${rows || '<tr><td colspan="10" class="empty">Geen aanbiedingen gevonden binnen deze filters.</td></tr>'}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:32px;">Vaker gezocht in deze regio</h2>
+  <p class="form-intro">Bedrijven die structureel op zoek zijn naar dit soort ritten, ongeacht een actuele aanbieding.</p>
+  <table class="offers ritregels">
+    <thead>
+      <tr><th>Type</th><th>Regio</th><th>Opmerking</th><th>Bedrijf</th></tr>
+    </thead>
+    <tbody>
+      ${ritregelRows || '<tr><td colspan="4" class="empty">Nog geen ritregels geplaatst.</td></tr>'}
     </tbody>
   </table>
   `;
