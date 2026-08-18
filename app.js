@@ -600,7 +600,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
       <td>${ritregelBadge(r.type)}</td>
       <td>${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</td>
       <td>${r.opmerking ? esc(r.opmerking) : '-'}</td>
-      <td>${esc(r.bedrijf_naam)}${r.bedrijf_algemeen_telefoon ? `<br><small><a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a></small>` : ''}</td>
+      <td>${esc(r.bedrijf_naam)}${r.bedrijf_algemeen_telefoon ? ` &middot; <a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a>` : ''}</td>
       <td>${actie}</td>
     </tr>`;
   }).join('');
