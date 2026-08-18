@@ -69,6 +69,10 @@ async function migreer() {
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS omschrijving TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS materieel TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS materieel_anders TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS bank TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS iban TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS bic TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS btw_nummer TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ritregels (
       id TEXT PRIMARY KEY,
@@ -293,6 +297,34 @@ app.get('/uitloggen', (req, res) => {
 });
 
 // ---------- mijn bedrijf: profiel + ritregels ----------
+function briefhoofdMailtoLink(c) {
+  const regels = ['Geachte heer/mevrouw,', '', 'Hierbij onze bedrijfsgegevens:', '', c.naam];
+  if (c.adres) regels.push(c.adres);
+  const plaatsregel = [c.postcode, c.plaats].filter(Boolean).join(' ');
+  if (plaatsregel) regels.push(plaatsregel);
+  if (c.land) regels.push(landNaam(c.land));
+  const telefoon = c.algemeen_telefoon || c.contactpersoon_telefoon || '';
+  const email = c.algemeen_email || c.contactpersoon_email || '';
+  const contactregels = [];
+  if (telefoon) contactregels.push(`Tel: ${telefoon}`);
+  if (email) contactregels.push(`E-mail: ${email}`);
+  if (c.website) contactregels.push(`Website: ${c.website}`);
+  if (contactregels.length) { regels.push(''); regels.push(...contactregels); }
+  const nummerregels = [];
+  if (c.kvk) nummerregels.push(`KVK-nummer: ${c.kvk}`);
+  if (c.btw_nummer) nummerregels.push(`BTW-nummer: ${c.btw_nummer}`);
+  if (nummerregels.length) { regels.push(''); regels.push(...nummerregels); }
+  const bankregels = [];
+  if (c.bank) bankregels.push(`Bank: ${c.bank}`);
+  if (c.iban) bankregels.push(`IBAN: ${c.iban}`);
+  if (c.bic) bankregels.push(`BIC/Swift-code: ${c.bic}`);
+  if (bankregels.length) { regels.push(''); regels.push(...bankregels); }
+  regels.push('', 'Met vriendelijke groet,', c.contactpersoon_naam || c.naam);
+  const tekst = regels.join(String.fromCharCode(13, 10));
+  const onderwerp = `Briefhoofd ${c.naam}`;
+  return `mailto:?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(tekst)}`;
+}
+
 app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM companies WHERE id = $1', [req.bedrijf.id]);
   const c = rows[0];
@@ -385,6 +417,14 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       <div><label>Website</label><input type="text" name="website" value="${esc(c.website || '')}"></div>
       <div><label>KVK-nummer</label><input type="text" name="kvk" value="${esc(c.kvk || '')}"></div>
     </div>
+    <div class="form-row two-col">
+      <div><label>Bank</label><input type="text" name="bank" value="${esc(c.bank || '')}"></div>
+      <div><label>BIC/Swift-code</label><input type="text" name="bic" value="${esc(c.bic || '')}"></div>
+    </div>
+    <div class="form-row two-col">
+      <div><label>IBAN</label><input type="text" name="iban" value="${esc(c.iban || '')}"></div>
+      <div><label>BTW-nummer</label><input type="text" name="btw_nummer" value="${esc(c.btw_nummer || '')}"></div>
+    </div>
     <div class="form-row">
       <label>Korte omschrijving</label>
       <input type="text" name="omschrijving" value="${esc(c.omschrijving || '')}" placeholder="bijv. Gespecialiseerd in gekoelde combi-transporten Nederland-Duitsland">
@@ -410,6 +450,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       <button type="submit">Gegevens opslaan</button>
     </div>
   </form>
+  <p style="margin-top:16px;"><a href="${esc(briefhoofdMailtoLink(c))}" class="link-btn">Briefhoofd versturen</a></p>
 
   <h2 style="margin-top:32px;">Jouw ritregels (${ritregels.length}/4)</h2>
   <p class="form-intro">Ritregels die aan staan, zijn zichtbaar voor andere bedrijven bij &ldquo;Structureel gezocht&rdquo; op het overzicht.</p>
@@ -428,11 +469,12 @@ app.post('/mijn-bedrijf/bewerken', requireLogin, ah(async (req, res) => {
   await pool.query(
     `UPDATE companies SET adres=$1, postcode=$2, plaats=$3, land=$4, contactpersoon_naam=$5, contactpersoon_telefoon=$6,
       contactpersoon_email=$7, algemeen_telefoon=$8, algemeen_email=$9, website=$10, kvk=$11, omschrijving=$12,
-      materieel=$13, materieel_anders=$14 WHERE id=$15`,
+      materieel=$13, materieel_anders=$14, bank=$15, iban=$16, bic=$17, btw_nummer=$18 WHERE id=$19`,
     [req.body.adres || '', req.body.postcode || '', req.body.plaats || '', req.body.land || '',
      req.body.contactpersoon_naam || '', req.body.contactpersoon_telefoon || '', req.body.contactpersoon_email || '',
      req.body.algemeen_telefoon || '', req.body.algemeen_email || '', req.body.website || '', req.body.kvk || '',
-     req.body.omschrijving || '', materieel.join(','), req.body.materieel_anders || '', req.bedrijf.id]
+     req.body.omschrijving || '', materieel.join(','), req.body.materieel_anders || '',
+     req.body.bank || '', req.body.iban || '', req.body.bic || '', req.body.btw_nummer || '', req.bedrijf.id]
   );
   res.redirect('/mijn-bedrijf?opgeslagen=1');
 }));
