@@ -446,9 +446,9 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       <label>Toelichting bij &ldquo;Anders&rdquo;</label>
       <input type="text" name="materieel_anders" value="${esc(c.materieel_anders || '')}" placeholder="bijv. tankcontainer-chassis">
     </div>
-    <div class="form-row" style="display:flex; align-items:center; gap:12px;">
-      <button type="submit">Gegevens opslaan</button>
-      <a href="${esc(briefhoofdMailtoLink(c))}" class="link-btn-outline">Briefhoofd versturen</a>
+    <div class="form-row two-col">
+      <button type="submit" style="flex:1;">Gegevens opslaan</button>
+      <a href="${esc(briefhoofdMailtoLink(c))}" class="link-btn-outline" style="flex:1; text-align:center;">Briefhoofd versturen</a>
     </div>
   </form>
 
