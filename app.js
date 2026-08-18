@@ -478,7 +478,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
         <input type="text" name="uitrusting_anders" class="materieel-vrij" value="${esc(c.uitrusting_anders || '')}" placeholder="bijv. Schuifzeil">
       </div>
     </div>
-    <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--rand);">
+    <div style="margin-top:24px; padding-top:20px; padding-bottom:20px; border-top:1px solid var(--rand); border-bottom:1px solid var(--rand);">
       <div style="display:flex; align-items:center; justify-content:space-between;">
         <label style="font-weight:600; font-size:0.95rem; color:var(--blauw);">Zichtbaar voor andere bedrijven</label>
         <label class="toggle-btn ${c.profiel_zichtbaar ? 'aan' : 'uit'}">
@@ -494,6 +494,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
         ${zichtbaarheidCheckbox('locatie', 'Plaats en land')}
         ${zichtbaarheidCheckbox('combis', 'Aantal combi&rsquo;s')}
         ${zichtbaarheidCheckbox('oprichtingsjaar', 'Oprichtingsjaar')}
+        ${zichtbaarheidCheckbox('kvk', 'KVK-nummer')}
         ${zichtbaarheidCheckbox('materieel', 'Materieel en specialisatie')}
         ${zichtbaarheidCheckbox('ritregels', 'Structureel gezocht (ritregels)')}
       </div>
@@ -578,15 +579,17 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
 
   ${contactregels.length ? `<div style="display:flex; gap:24px; flex-wrap:wrap; padding:14px 0; border-top:1px solid var(--rand); border-bottom:1px solid var(--rand); margin:14px 0;">${contactregels.join('')}</div>` : ''}
 
-  ${heeft('omschrijving') && c.omschrijving ? `<p style="margin-top:14px;">${esc(c.omschrijving)}</p>` : ''}
-
-  ${(heeft('combis') && c.aantal_combis) || (heeft('oprichtingsjaar') && c.oprichtingsjaar) ? `<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; font-size:0.9rem;">
+  ${(heeft('combis') && c.aantal_combis) || (heeft('oprichtingsjaar') && c.oprichtingsjaar) || (heeft('kvk') && c.kvk) ? `<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; font-size:0.9rem;">
     ${heeft('combis') && c.aantal_combis ? `<div><span style="color:var(--grijs);">Aantal combi&rsquo;s &middot; </span>${esc(c.aantal_combis)}</div>` : ''}
     ${heeft('oprichtingsjaar') && c.oprichtingsjaar ? `<div><span style="color:var(--grijs);">Opgericht in &middot; </span>${esc(c.oprichtingsjaar)}</div>` : ''}
+    ${heeft('kvk') && c.kvk ? `<div><span style="color:var(--grijs);">KVK-nummer &middot; </span>${esc(c.kvk)}</div>` : ''}
   </div>` : ''}
 
+  ${heeft('omschrijving') && c.omschrijving ? `<p style="margin-top:14px;">${esc(c.omschrijving)}</p>` : ''}
+
   ${materieelChips.length || uitrustingChips.length ? `<h2 style="margin-top:24px;">Materieel en specialisatie</h2>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">${materieelChips.map(chip).join('')}${uitrustingChips.map(chip).join('')}</div>` : ''}
+  ${materieelChips.length ? `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:${uitrustingChips.length ? '8px' : '0'};">${materieelChips.map(chip).join('')}</div>` : ''}
+  ${uitrustingChips.length ? `<div style="display:flex; gap:8px; flex-wrap:wrap;">${uitrustingChips.map(chip).join('')}</div>` : ''}` : ''}
 
   ${ritregelsHtml}
 
