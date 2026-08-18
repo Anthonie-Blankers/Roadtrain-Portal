@@ -584,7 +584,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     return `mailto:${email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(ritregelMailtoBody(r))}`;
   }
   const { rows: ritregels } = await pool.query(`
-    SELECT r.*, c.naam AS bedrijf_naam, c.algemeen_email AS bedrijf_algemeen_email, c.contactpersoon_email AS bedrijf_contactpersoon_email
+    SELECT r.*, c.naam AS bedrijf_naam, c.algemeen_email AS bedrijf_algemeen_email, c.contactpersoon_email AS bedrijf_contactpersoon_email, c.algemeen_telefoon AS bedrijf_algemeen_telefoon
     FROM ritregels r
     JOIN companies c ON c.id = r.bedrijf_id
     WHERE r.actief = true AND c.actief = true
@@ -600,7 +600,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
       <td>${ritregelBadge(r.type)}</td>
       <td>${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</td>
       <td>${r.opmerking ? esc(r.opmerking) : '-'}</td>
-      <td>${esc(r.bedrijf_naam)}</td>
+      <td>${esc(r.bedrijf_naam)}${r.bedrijf_algemeen_telefoon ? `<br><small><a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a></small>` : ''}</td>
       <td>${actie}</td>
     </tr>`;
   }).join('');
