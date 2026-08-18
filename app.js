@@ -412,7 +412,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
   </form>
 
   <h2 style="margin-top:32px;">Jouw ritregels (${ritregels.length}/4)</h2>
-  <p class="form-intro">Ritregels die aan staan, zijn zichtbaar voor andere bedrijven bij &ldquo;Vaker gezocht in deze regio&rdquo; op het overzicht.</p>
+  <p class="form-intro">Ritregels die aan staan, zijn zichtbaar voor andere bedrijven bij &ldquo;Structureel gezocht&rdquo; op het overzicht.</p>
   <div class="ritregel-lijst">
     ${ritregelRijen || '<p class="form-intro">Nog geen ritregels toegevoegd.</p>'}
   </div>
@@ -708,11 +708,11 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     </tbody>
   </table>
 
-  <h2 style="margin-top:32px;">Vaker gezocht in deze regio</h2>
-  <p class="form-intro">Bedrijven die structureel op zoek zijn naar dit soort ritten, ongeacht een actuele aanbieding.</p>
+  <h2 style="margin-top:32px;">Structureel gezocht</h2>
+  <p class="form-intro">Bedrijven die regelmatig op zoek zijn naar vracht of capaciteit op deze route.</p>
   <table class="offers ritregels">
     <thead>
-      <tr><th>Type</th><th>Regio</th><th>Opmerking</th><th>Bedrijf</th><th>Actie</th></tr>
+      <tr><th>Type</th><th>Route</th><th>Regio</th><th>Bedrijf</th><th>Actie</th></tr>
     </thead>
     <tbody>
       ${ritregelRows || '<tr><td colspan="5" class="empty">Nog geen ritregels geplaatst.</td></tr>'}
@@ -724,7 +724,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
 }));
 
 // ---------- nieuwe aanbieding: gedeelde formulier-renderer ----------
-function nieuwFormBody(modus, bedrijfNaam) {
+function nieuwFormBody(modus, bedrijf) {
   const isCapaciteit = modus === 'capaciteit'; const vandaag = new Date().toISOString().slice(0, 10); const nb = new Date(); nb.setDate(nb.getDate() + 1); if (nb.getDay() === 6) nb.setDate(nb.getDate() + 2); else if (nb.getDay() === 0) nb.setDate(nb.getDate() + 1); const losdatumDefault = nb.toISOString().slice(0, 10);
   const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
   const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
@@ -819,21 +819,21 @@ function nieuwFormBody(modus, bedrijfNaam) {
     <div class="form-row two-col">
       <div>
         <label>Bedrijfsnaam</label>
-        <input type="text" name="bedrijf" value="${esc(bedrijfNaam)}" readonly>
+        <input type="text" name="bedrijf" value="${esc(bedrijf.naam)}" readonly>
       </div>
       <div>
         <label>Contactpersoon</label>
-        <input type="text" name="contactpersoon" required>
+        <input type="text" name="contactpersoon" required value="${esc(bedrijf.contactpersoon_naam || '')}">
       </div>
     </div>
     <div class="form-row two-col">
       <div>
         <label>Telefoon</label>
-        <input type="text" name="telefoon" required>
+        <input type="text" name="telefoon" required value="${esc(bedrijf.contactpersoon_telefoon || '')}">
       </div>
       <div>
         <label>E-mail (optioneel)</label>
-        <input type="email" name="email">
+        <input type="email" name="email" value="${esc(bedrijf.contactpersoon_email || '')}">
       </div>
     </div>
     <div class="form-row">
@@ -844,11 +844,11 @@ function nieuwFormBody(modus, bedrijfNaam) {
 }
 
 app.get('/nieuw/vracht', requireLogin, (req, res) => {
-  res.send(layout(req, 'Combi-Match - Vracht aanbieden', nieuwFormBody('vracht', req.bedrijf.naam)));
+  res.send(layout(req, 'Combi-Match - Vracht aanbieden', nieuwFormBody('vracht', req.bedrijf)));
 });
 
 app.get('/nieuw/capaciteit', requireLogin, (req, res) => {
-  res.send(layout(req, 'Combi-Match - Capaciteit aanbieden', nieuwFormBody('capaciteit', req.bedrijf.naam)));
+  res.send(layout(req, 'Combi-Match - Capaciteit aanbieden', nieuwFormBody('capaciteit', req.bedrijf)));
 });
 
 // oude link blijft werken
