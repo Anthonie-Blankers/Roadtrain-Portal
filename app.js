@@ -577,13 +577,13 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
   <h1>${esc(c.naam)}</h1>
   ${heeft('locatie') && (c.plaats || c.land) ? `<p class="form-intro">${[esc(c.plaats), c.land ? landNaam(c.land) : ''].filter(Boolean).join(', ')}</p>` : ''}
 
-  ${contactregels.length ? `<div style="display:flex; gap:24px; flex-wrap:wrap; padding:14px 0; border-top:1px solid var(--rand); border-bottom:1px solid var(--rand); margin:14px 0;">${contactregels.join('')}</div>` : ''}
-
-  ${(heeft('combis') && c.aantal_combis) || (heeft('oprichtingsjaar') && c.oprichtingsjaar) || (heeft('kvk') && c.kvk) ? `<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; font-size:0.9rem;">
+  ${(heeft('combis') && c.aantal_combis) || (heeft('oprichtingsjaar') && c.oprichtingsjaar) || (heeft('kvk') && c.kvk) ? `<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:10px; font-size:0.9rem;">
     ${heeft('combis') && c.aantal_combis ? `<div><span style="color:var(--grijs);">Aantal combi&rsquo;s &middot; </span>${esc(c.aantal_combis)}</div>` : ''}
     ${heeft('oprichtingsjaar') && c.oprichtingsjaar ? `<div><span style="color:var(--grijs);">Opgericht in &middot; </span>${esc(c.oprichtingsjaar)}</div>` : ''}
     ${heeft('kvk') && c.kvk ? `<div><span style="color:var(--grijs);">KVK-nummer &middot; </span>${esc(c.kvk)}</div>` : ''}
   </div>` : ''}
+
+  ${contactregels.length ? `<div style="display:flex; gap:24px; flex-wrap:wrap; padding:14px 0; border-top:1px solid var(--rand); border-bottom:1px solid var(--rand); margin:14px 0;">${contactregels.join('')}</div>` : ''}
 
   ${heeft('omschrijving') && c.omschrijving ? `<p style="margin-top:14px;">${esc(c.omschrijving)}</p>` : ''}
 
