@@ -304,6 +304,7 @@ table.offers tr.vervuld { opacity: 0.5; }
 
 .materieel-opties { display: flex; gap: 16px; flex-wrap: wrap; }
 .materieel-optie { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 0.9rem; }
+.materieel-vrij { padding: 4px 8px; border: 1px solid var(--rand); border-radius: 5px; font-size: 0.85rem; width: 160px; }
 
 /* kolombreedtes voor de ritregels-tabel (4 kolommen) */
 table.offers.ritregels th:nth-child(1), table.offers.ritregels td:nth-child(1) { width: 13%; }
