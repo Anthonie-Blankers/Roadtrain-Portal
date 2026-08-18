@@ -75,6 +75,10 @@ async function migreer() {
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS iban TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS bic TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS btw_nummer TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS aantal_combis TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS oprichtingsjaar TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS profiel_zichtbaar BOOLEAN NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS zichtbare_velden TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ritregels (
       id TEXT PRIMARY KEY,
@@ -334,6 +338,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
   const opgeslagen = req.query.opgeslagen === '1';
   const materieelWaarden = (c.materieel || '').split(',').filter(Boolean);
   const uitrustingWaarden = (c.uitrusting || '').split(',').filter(Boolean);
+  const zichtbareVelden = (c.zichtbare_velden || '').split(',').filter(Boolean);
 
   const ritregelRijen = ritregels.map(r => `
     <div class="ritregel-rij">
@@ -385,6 +390,16 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 
   const materieelCheckbox = (waarde, label) => `<label class="materieel-optie"><input type="checkbox" name="materieel" value="${waarde}" ${materieelWaarden.includes(waarde) ? 'checked' : ''}> ${label}</label>`;
   const uitrustingCheckbox = (waarde, label) => `<label class="materieel-optie"><input type="checkbox" name="uitrusting" value="${waarde}" ${uitrustingWaarden.includes(waarde) ? 'checked' : ''}> ${label}</label>`;
+  const zichtbaarheidCheckbox = (waarde, label) => {
+    const aan = zichtbareVelden.includes(waarde);
+    return `<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-top:1px solid var(--rand); font-size:0.9rem;">
+      <span>${label}</span>
+      <label class="toggle-btn ${aan ? 'aan' : 'uit'}">
+        <input type="checkbox" name="zichtbare_velden" value="${waarde}" ${aan ? 'checked' : ''} style="display:none;" onchange="this.parentElement.classList.toggle('aan', this.checked); this.parentElement.classList.toggle('uit', !this.checked);">
+        <span></span>
+      </label>
+    </div>`;
+  };
 
   const body = `
   <h1>Mijn bedrijf &mdash; ${esc(c.naam)}</h1>
@@ -404,6 +419,10 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
     <div class="form-row two-col">
       <div><label>Plaats</label><input type="text" name="plaats" value="${esc(c.plaats || '')}"></div>
       <div><label>Land</label><select name="land">${landOptions(c.land, true)}</select></div>
+    </div>
+    <div class="form-row two-col">
+      <div><label>Aantal combi's</label><input type="number" name="aantal_combis" min="0" value="${esc(c.aantal_combis || '')}"></div>
+      <div><label>Oprichtingsjaar</label><input type="number" name="oprichtingsjaar" min="1800" max="2100" value="${esc(c.oprichtingsjaar || '')}"></div>
     </div>
     <div class="form-row two-col">
       <div><label>Contactpersoon &ndash; naam</label><input type="text" name="contactpersoon_naam" value="${esc(c.contactpersoon_naam || '')}"></div>
@@ -459,7 +478,28 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
         <input type="text" name="uitrusting_anders" class="materieel-vrij" value="${esc(c.uitrusting_anders || '')}" placeholder="bijv. Schuifzeil">
       </div>
     </div>
-    <div class="form-row two-col">
+    <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--rand);">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <label style="font-weight:600; font-size:0.95rem; color:var(--blauw);">Zichtbaar voor andere bedrijven</label>
+        <label class="toggle-btn ${c.profiel_zichtbaar ? 'aan' : 'uit'}">
+          <input type="checkbox" name="profiel_zichtbaar" value="1" ${c.profiel_zichtbaar ? 'checked' : ''} style="display:none;" onchange="this.parentElement.classList.toggle('aan', this.checked); this.parentElement.classList.toggle('uit', !this.checked); document.getElementById('zichtbaarheid-body').style.display = this.checked ? 'block' : 'none';">
+          <span></span>
+        </label>
+      </div>
+      <div id="zichtbaarheid-body" style="display:${c.profiel_zichtbaar ? 'block' : 'none'}; margin-top:14px;">
+        <p class="form-intro">Kies welke gegevens je wilt delen. Contactpersoon, adres en financi&euml;le gegevens worden nooit gedeeld.</p>
+        ${zichtbaarheidCheckbox('telefoon', 'Algemeen telefoonnummer')}
+        ${zichtbaarheidCheckbox('email', 'Algemeen e-mailadres')}
+        ${zichtbaarheidCheckbox('omschrijving', 'Korte omschrijving')}
+        ${zichtbaarheidCheckbox('locatie', 'Plaats en land')}
+        ${zichtbaarheidCheckbox('combis', 'Aantal combi&rsquo;s')}
+        ${zichtbaarheidCheckbox('oprichtingsjaar', 'Oprichtingsjaar')}
+        ${zichtbaarheidCheckbox('materieel', 'Materieel en specialisatie')}
+        ${zichtbaarheidCheckbox('ritregels', 'Structureel gezocht (ritregels)')}
+      </div>
+    </div>
+
+    <div class="form-row two-col" style="margin-top:24px;">
       <button type="submit" style="flex:1;">Gegevens opslaan</button>
       <a href="${esc(briefhoofdMailtoLink(c))}" class="link-btn-outline" style="flex:1; text-align:center;">Briefhoofd versturen</a>
     </div>
@@ -480,18 +520,80 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 app.post('/mijn-bedrijf/bewerken', requireLogin, ah(async (req, res) => {
   const materieel = Array.isArray(req.body.materieel) ? req.body.materieel : (req.body.materieel ? [req.body.materieel] : []);
   const uitrusting = Array.isArray(req.body.uitrusting) ? req.body.uitrusting : (req.body.uitrusting ? [req.body.uitrusting] : []);
+  const zichtbareVelden = Array.isArray(req.body.zichtbare_velden) ? req.body.zichtbare_velden : (req.body.zichtbare_velden ? [req.body.zichtbare_velden] : []);
+  const profielZichtbaar = req.body.profiel_zichtbaar === '1';
   await pool.query(
     `UPDATE companies SET adres=$1, postcode=$2, plaats=$3, land=$4, contactpersoon_naam=$5, contactpersoon_telefoon=$6,
       contactpersoon_email=$7, algemeen_telefoon=$8, algemeen_email=$9, website=$10, kvk=$11, omschrijving=$12,
-      materieel=$13, materieel_anders=$14, bank=$15, iban=$16, bic=$17, btw_nummer=$18, uitrusting=$19, uitrusting_anders=$20 WHERE id=$21`,
+      materieel=$13, materieel_anders=$14, bank=$15, iban=$16, bic=$17, btw_nummer=$18, uitrusting=$19, uitrusting_anders=$20,
+      aantal_combis=$21, oprichtingsjaar=$22, profiel_zichtbaar=$23, zichtbare_velden=$24 WHERE id=$25`,
     [req.body.adres || '', req.body.postcode || '', req.body.plaats || '', req.body.land || '',
      req.body.contactpersoon_naam || '', req.body.contactpersoon_telefoon || '', req.body.contactpersoon_email || '',
      req.body.algemeen_telefoon || '', req.body.algemeen_email || '', req.body.website || '', req.body.kvk || '',
      req.body.omschrijving || '', materieel.join(','), req.body.materieel_anders || '',
      req.body.bank || '', req.body.iban || '', req.body.bic || '', req.body.btw_nummer || '',
-     uitrusting.join(','), req.body.uitrusting_anders || '', req.bedrijf.id]
+     uitrusting.join(','), req.body.uitrusting_anders || '',
+     req.body.aantal_combis || '', req.body.oprichtingsjaar || '', profielZichtbaar, zichtbareVelden.join(','), req.bedrijf.id]
   );
   res.redirect('/mijn-bedrijf?opgeslagen=1');
+}));
+
+app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM companies WHERE id = $1 AND actief = true', [req.params.id]);
+  const c = rows[0];
+  if (!c || !c.profiel_zichtbaar) {
+    return res.status(404).send(layout(req, 'Combi-Match - Profiel niet gevonden', '<h1>Bedrijfsprofiel niet gevonden</h1><p class="form-intro">Dit profiel bestaat niet of is niet zichtbaar gemaakt.</p>'));
+  }
+  const zichtbareVelden = (c.zichtbare_velden || '').split(',').filter(Boolean);
+  const heeft = (veld) => zichtbareVelden.includes(veld);
+
+  const contactregels = [];
+  if (heeft('telefoon') && c.algemeen_telefoon) contactregels.push(`<div><span style="color:var(--grijs);">Telefoon &middot; </span><a href="tel:${esc(c.algemeen_telefoon)}">${esc(c.algemeen_telefoon)}</a></div>`);
+  if (heeft('email') && c.algemeen_email) contactregels.push(`<div><span style="color:var(--grijs);">E-mail &middot; </span><a href="mailto:${esc(c.algemeen_email)}">${esc(c.algemeen_email)}</a></div>`);
+
+  let ritregelsHtml = '';
+  if (heeft('ritregels')) {
+    const { rows: ritregels } = await pool.query('SELECT * FROM ritregels WHERE bedrijf_id = $1 AND actief = true ORDER BY aangemaakt_op ASC', [c.id]);
+    ritregelsHtml = `
+    <h2 style="margin-top:24px;">Structureel gezocht</h2>
+    <div class="ritregel-lijst">
+      ${ritregels.length ? ritregels.map(r => `
+        <div class="ritregel-rij">
+          <div class="ritregel-rij-info">
+            ${ritregelBadge(r.type)}
+            <span class="ritregel-route">${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</span>
+            ${r.opmerking ? `<span class="ritregel-opmerking">${esc(r.opmerking)}</span>` : ''}
+          </div>
+        </div>`).join('') : '<p class="form-intro">Geen actieve ritregels.</p>'}
+    </div>`;
+  }
+
+  const materieelChips = (heeft('materieel') && (c.materieel || c.materieel_anders)) ? (c.materieel || '').split(',').filter(Boolean).map(m => ({volumecombi:'(Volume)combi', lzv:'LZV', koelvries:'Koel/vries-combi', megatrailer:'Mega trailer', standaard:'Standaard trailer'}[m] || m)).concat(c.materieel_anders ? [c.materieel_anders] : []) : [];
+  const uitrustingChips = (heeft('materieel') && (c.uitrusting || c.uitrusting_anders)) ? (c.uitrusting || '').split(',').filter(Boolean).map(u => ({laadklep:'Laadklep', pompwagen:'(Elektrische) pompwagen', dubbeldekvloer:'Dubbeldekvloer', dubbeldekbalken:'Dubbeldekbalken', oprijdplaten:'Oprijdplaten', kooiaap:'Kooiaap', houtrongen:'Houtrongen'}[u] || u)).concat(c.uitrusting_anders ? [c.uitrusting_anders] : []) : [];
+  const chip = (t) => `<span class="materieel-optie" style="background:var(--blauw-licht); color:var(--blauw); padding:4px 10px; border-radius:5px;">${esc(t)}</span>`;
+
+  const body = `
+  <h1>${esc(c.naam)}</h1>
+  ${heeft('locatie') && (c.plaats || c.land) ? `<p class="form-intro">${[esc(c.plaats), c.land ? landNaam(c.land) : ''].filter(Boolean).join(', ')}</p>` : ''}
+
+  ${contactregels.length ? `<div style="display:flex; gap:24px; flex-wrap:wrap; padding:14px 0; border-top:1px solid var(--rand); border-bottom:1px solid var(--rand); margin:14px 0;">${contactregels.join('')}</div>` : ''}
+
+  ${heeft('omschrijving') && c.omschrijving ? `<p style="margin-top:14px;">${esc(c.omschrijving)}</p>` : ''}
+
+  ${(heeft('combis') && c.aantal_combis) || (heeft('oprichtingsjaar') && c.oprichtingsjaar) ? `<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; font-size:0.9rem;">
+    ${heeft('combis') && c.aantal_combis ? `<div><span style="color:var(--grijs);">Aantal combi&rsquo;s &middot; </span>${esc(c.aantal_combis)}</div>` : ''}
+    ${heeft('oprichtingsjaar') && c.oprichtingsjaar ? `<div><span style="color:var(--grijs);">Opgericht in &middot; </span>${esc(c.oprichtingsjaar)}</div>` : ''}
+  </div>` : ''}
+
+  ${materieelChips.length || uitrustingChips.length ? `<h2 style="margin-top:24px;">Materieel en specialisatie</h2>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">${materieelChips.map(chip).join('')}${uitrustingChips.map(chip).join('')}</div>` : ''}
+
+  ${ritregelsHtml}
+
+  <p class="form-intro" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--rand);">Dit zijn de gegevens die ${esc(c.naam)} zelf heeft vrijgegeven. Overige bedrijfsgegevens blijven priv&eacute;.</p>
+  `;
+
+  res.send(layout(req, `Combi-Match - ${c.naam}`, body));
 }));
 
 app.post('/mijn-bedrijf/ritregels', requireLogin, ah(async (req, res) => {
@@ -640,8 +742,11 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     const onderwerp = `${landNaam(r.regio_van)} -> ${landNaam(r.regio_naar)} - Via CombiMatch`;
     return `mailto:${email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(ritregelMailtoBody(r))}`;
   }
+  const { rows: zichtbareBedrijvenRows } = await pool.query('SELECT id FROM companies WHERE profiel_zichtbaar = true');
+  const zichtbareBedrijfIds = new Set(zichtbareBedrijvenRows.map(r => r.id));
+
   const { rows: ritregelsVast } = await pool.query(`
-    SELECT r.*, c.naam AS bedrijf_naam, c.algemeen_email AS bedrijf_algemeen_email, c.contactpersoon_email AS bedrijf_contactpersoon_email, c.algemeen_telefoon AS bedrijf_algemeen_telefoon
+    SELECT r.*, c.naam AS bedrijf_naam, c.algemeen_email AS bedrijf_algemeen_email, c.contactpersoon_email AS bedrijf_contactpersoon_email, c.algemeen_telefoon AS bedrijf_algemeen_telefoon, c.profiel_zichtbaar AS bedrijf_profiel_zichtbaar
     FROM ritregels r
     JOIN companies c ON c.id = r.bedrijf_id
     WHERE r.actief = true AND c.actief = true
@@ -665,7 +770,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
       <td>${ritregelBadge(r.type)}</td>
       <td>${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</td>
       <td>${r.opmerking ? esc(r.opmerking) : '-'}</td>
-      <td>${esc(r.bedrijf_naam)}${r.bedrijf_algemeen_telefoon ? ` &middot; <a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a>` : ''}</td>
+      <td>${r.bedrijf_profiel_zichtbaar ? `<a href="/bedrijf/${r.bedrijf_id}">${esc(r.bedrijf_naam)}</a>` : esc(r.bedrijf_naam)}${r.bedrijf_algemeen_telefoon ? ` &middot; <a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a>` : ''}</td>
       <td>${actie}</td>
     </tr>`;
   }).join('');
@@ -680,7 +785,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
       <td>${esc(o.hoogte)} m</td>
       <td>${o.gewicht ? esc(o.gewicht) + ' t' : '-'}</td>
       <td>${o.type_lading ? esc(o.type_lading) : '-'}${o.opmerking ? '<br><small>' + esc(o.opmerking) + '</small>' : ''}</td>
-      <td>${esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; <a href="tel:${esc(o.telefoon)}">${esc(o.telefoon)}</a>${o.email ? ' &middot; <a href="mailto:' + esc(o.email) + '">' + esc(o.email) + '</a>' : ''}</small></td>
+      <td>${zichtbareBedrijfIds.has(o.bedrijf_id) ? `<a href="/bedrijf/${o.bedrijf_id}">${esc(o.bedrijf)}</a>` : esc(o.bedrijf)}<br><small>${esc(o.contactpersoon)} &middot; <a href="tel:${esc(o.telefoon)}">${esc(o.telefoon)}</a>${o.email ? ' &middot; <a href="mailto:' + esc(o.email) + '">' + esc(o.email) + '</a>' : ''}</small></td>
       <td>${o.bedrijf_id === req.bedrijf.id ? `<a href="/aanbieding/${o.id}" class="beheer-icon" title="Bewerken"><img src="/icon-dark.png" alt="Bewerken" class="beheer-icon-img"></a>` : (o.email ? `<a href="${esc(mailtoLink(o))}" class="beheer-icon" title="Mail sturen naar ${esc(o.bedrijf)}"><img src="/icon-white.png" alt="Mail sturen" class="beheer-icon-img"></a>` : `<img src="/icon-white.png" alt="" class="beheer-icon-img beheer-icon-inactive">`)}</td>
     </tr>`).join('');
 
