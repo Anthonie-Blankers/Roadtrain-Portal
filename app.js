@@ -319,7 +319,7 @@ function briefhoofdMailtoLink(c) {
   if (c.iban) bankregels.push(`IBAN: ${c.iban}`);
   if (c.bic) bankregels.push(`BIC/Swift-code: ${c.bic}`);
   if (bankregels.length) { regels.push(''); regels.push(...bankregels); }
-  regels.push('', 'Met vriendelijke groet,', c.contactpersoon_naam || c.naam);
+  regels.push('', 'Met vriendelijke groet,', c.naam);
   const tekst = regels.join(String.fromCharCode(13, 10));
   const onderwerp = `Briefhoofd ${c.naam}`;
   return `mailto:?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(tekst)}`;
