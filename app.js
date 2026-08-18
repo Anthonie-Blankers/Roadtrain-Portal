@@ -362,37 +362,37 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
     </div>
     <div class="form-row two-col">
-      <div><label>Adres (optioneel)</label><input type="text" name="adres" value="${esc(c.adres || '')}"></div>
-      <div><label>Postcode (optioneel)</label><input type="text" name="postcode" value="${esc(c.postcode || '')}"></div>
+      <div><label>Adres</label><input type="text" name="adres" value="${esc(c.adres || '')}"></div>
+      <div><label>Postcode</label><input type="text" name="postcode" value="${esc(c.postcode || '')}"></div>
     </div>
     <div class="form-row two-col">
-      <div><label>Plaats (optioneel)</label><input type="text" name="plaats" value="${esc(c.plaats || '')}"></div>
-      <div><label>Land (optioneel)</label><select name="land">${landOptions(c.land, true)}</select></div>
+      <div><label>Plaats</label><input type="text" name="plaats" value="${esc(c.plaats || '')}"></div>
+      <div><label>Land</label><select name="land">${landOptions(c.land, true)}</select></div>
     </div>
     <div class="form-row two-col">
-      <div><label>Contactpersoon &ndash; naam (optioneel)</label><input type="text" name="contactpersoon_naam" value="${esc(c.contactpersoon_naam || '')}"></div>
-      <div><label>Contactpersoon &ndash; telefoon (optioneel)</label><input type="text" name="contactpersoon_telefoon" value="${esc(c.contactpersoon_telefoon || '')}"></div>
+      <div><label>Contactpersoon &ndash; naam</label><input type="text" name="contactpersoon_naam" value="${esc(c.contactpersoon_naam || '')}"></div>
+      <div><label>Contactpersoon &ndash; telefoon</label><input type="text" name="contactpersoon_telefoon" value="${esc(c.contactpersoon_telefoon || '')}"></div>
     </div>
     <div class="form-row">
-      <label>Contactpersoon &ndash; e-mail (optioneel)</label>
+      <label>Contactpersoon &ndash; e-mail</label>
       <input type="email" name="contactpersoon_email" value="${esc(c.contactpersoon_email || '')}">
     </div>
     <div class="form-row two-col">
-      <div><label>Algemeen telefoonnummer (optioneel)</label><input type="text" name="algemeen_telefoon" value="${esc(c.algemeen_telefoon || '')}"></div>
-      <div><label>Algemeen e-mailadres (optioneel)</label><input type="email" name="algemeen_email" value="${esc(c.algemeen_email || '')}"></div>
+      <div><label>Algemeen telefoonnummer</label><input type="text" name="algemeen_telefoon" value="${esc(c.algemeen_telefoon || '')}"></div>
+      <div><label>Algemeen e-mailadres</label><input type="email" name="algemeen_email" value="${esc(c.algemeen_email || '')}"></div>
     </div>
     <div class="form-row two-col">
-      <div><label>Website (optioneel)</label><input type="text" name="website" value="${esc(c.website || '')}"></div>
-      <div><label>KVK-nummer (optioneel)</label><input type="text" name="kvk" value="${esc(c.kvk || '')}"></div>
+      <div><label>Website</label><input type="text" name="website" value="${esc(c.website || '')}"></div>
+      <div><label>KVK-nummer</label><input type="text" name="kvk" value="${esc(c.kvk || '')}"></div>
     </div>
     <div class="form-row">
-      <label>Korte omschrijving (optioneel)</label>
+      <label>Korte omschrijving</label>
       <input type="text" name="omschrijving" value="${esc(c.omschrijving || '')}" placeholder="bijv. Gespecialiseerd in gekoelde combi-transporten Nederland-Duitsland">
     </div>
 
     <h2 style="margin-top:24px;">Materieel en specialisatie</h2>
     <div class="form-row">
-      <label>Type materieel dat we rijden (optioneel)</label>
+      <label>Type materieel dat we rijden</label>
       <div class="materieel-opties">
         ${materieelCheckbox('combi', 'Combi')}
         ${materieelCheckbox('lzv', 'LZV')}
@@ -403,7 +403,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       </div>
     </div>
     <div class="form-row">
-      <label>Toelichting bij &ldquo;Anders&rdquo; (optioneel)</label>
+      <label>Toelichting bij &ldquo;Anders&rdquo;</label>
       <input type="text" name="materieel_anders" value="${esc(c.materieel_anders || '')}" placeholder="bijv. tankcontainer-chassis">
     </div>
     <div class="form-row">
