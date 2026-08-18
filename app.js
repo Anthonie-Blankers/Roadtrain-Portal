@@ -446,11 +446,11 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       <label>Toelichting bij &ldquo;Anders&rdquo;</label>
       <input type="text" name="materieel_anders" value="${esc(c.materieel_anders || '')}" placeholder="bijv. tankcontainer-chassis">
     </div>
-    <div class="form-row">
+    <div class="form-row" style="display:flex; align-items:center; gap:12px;">
       <button type="submit">Gegevens opslaan</button>
+      <a href="${esc(briefhoofdMailtoLink(c))}" class="link-btn-outline">Briefhoofd versturen</a>
     </div>
   </form>
-  <p style="margin-top:16px;"><a href="${esc(briefhoofdMailtoLink(c))}" class="link-btn">Briefhoofd versturen</a></p>
 
   <h2 style="margin-top:32px;">Jouw ritregels (${ritregels.length}/4)</h2>
   <p class="form-intro">Ritregels die aan staan, zijn zichtbaar voor andere bedrijven bij &ldquo;Structureel gezocht&rdquo; op het overzicht.</p>
