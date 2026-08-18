@@ -583,13 +583,21 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     const onderwerp = `${landNaam(r.regio_van)} -> ${landNaam(r.regio_naar)} - Via CombiMatch`;
     return `mailto:${email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(ritregelMailtoBody(r))}`;
   }
-  const { rows: ritregels } = await pool.query(`
+  const { rows: ritregelsVast } = await pool.query(`
     SELECT r.*, c.naam AS bedrijf_naam, c.algemeen_email AS bedrijf_algemeen_email, c.contactpersoon_email AS bedrijf_contactpersoon_email, c.algemeen_telefoon AS bedrijf_algemeen_telefoon
     FROM ritregels r
     JOIN companies c ON c.id = r.bedrijf_id
     WHERE r.actief = true AND c.actief = true
-    ORDER BY r.aangemaakt_op DESC
+    ORDER BY r.aangemaakt_op ASC, r.id ASC
   `);
+  // eerlijke rotatie: elk uur schuift de onderste regel naar boven, zodat niet steeds dezelfde bedrijven bovenaan staan
+  const ritregels = (() => {
+    const n = ritregelsVast.length;
+    if (n === 0) return ritregelsVast;
+    const uurIndex = Math.floor(Date.now() / 3600000);
+    const offset = uurIndex % n;
+    return ritregelsVast.slice(n - offset).concat(ritregelsVast.slice(0, n - offset));
+  })();
   const ritregelRows = ritregels.map(r => {
     const email = r.bedrijf_algemeen_email || r.bedrijf_contactpersoon_email || '';
     const actie = r.bedrijf_id === req.bedrijf.id
