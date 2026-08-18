@@ -443,12 +443,8 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
         ${materieelCheckbox('koelvries', 'Koel/vries-combi')}
         ${materieelCheckbox('megatrailer', 'Mega trailer')}
         ${materieelCheckbox('standaard', 'Standaard trailer')}
-        ${materieelCheckbox('anders', 'Anders')}
+        <input type="text" name="materieel_anders" class="materieel-vrij" value="${esc(c.materieel_anders || '')}" placeholder="bijv. Koel/vries-LZV">
       </div>
-    </div>
-    <div class="form-row">
-      <label>Toelichting bij &ldquo;Anders&rdquo; (materiaal)</label>
-      <input type="text" name="materieel_anders" value="${esc(c.materieel_anders || '')}" placeholder="bijv. tankcontainer-chassis">
     </div>
     <div class="form-row" style="margin-top:12px;">
       <label>Uitrusting</label>
@@ -460,12 +456,8 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
         ${uitrustingCheckbox('oprijdplaten', 'Oprijdplaten')}
         ${uitrustingCheckbox('kooiaap', 'Kooiaap')}
         ${uitrustingCheckbox('houtrongen', 'Houtrongen')}
-        ${uitrustingCheckbox('anders', 'Anders')}
+        <input type="text" name="uitrusting_anders" class="materieel-vrij" value="${esc(c.uitrusting_anders || '')}" placeholder="bijv. Schuifzeil">
       </div>
-    </div>
-    <div class="form-row">
-      <label>Toelichting bij &ldquo;Anders&rdquo; (uitrusting)</label>
-      <input type="text" name="uitrusting_anders" value="${esc(c.uitrusting_anders || '')}" placeholder="bijv. glijzeil">
     </div>
     <div class="form-row two-col">
       <button type="submit" style="flex:1;">Gegevens opslaan</button>
