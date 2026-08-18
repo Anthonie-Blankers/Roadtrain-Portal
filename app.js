@@ -69,6 +69,8 @@ async function migreer() {
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS omschrijving TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS materieel TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS materieel_anders TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS uitrusting TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS uitrusting_anders TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS bank TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS iban TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS bic TEXT`);
@@ -331,6 +333,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
   const { rows: ritregels } = await pool.query('SELECT * FROM ritregels WHERE bedrijf_id = $1 ORDER BY aangemaakt_op ASC', [req.bedrijf.id]);
   const opgeslagen = req.query.opgeslagen === '1';
   const materieelWaarden = (c.materieel || '').split(',').filter(Boolean);
+  const uitrustingWaarden = (c.uitrusting || '').split(',').filter(Boolean);
 
   const ritregelRijen = ritregels.map(r => `
     <div class="ritregel-rij">
@@ -381,6 +384,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
     </form>`;
 
   const materieelCheckbox = (waarde, label) => `<label class="materieel-optie"><input type="checkbox" name="materieel" value="${waarde}" ${materieelWaarden.includes(waarde) ? 'checked' : ''}> ${label}</label>`;
+  const uitrustingCheckbox = (waarde, label) => `<label class="materieel-optie"><input type="checkbox" name="uitrusting" value="${waarde}" ${uitrustingWaarden.includes(waarde) ? 'checked' : ''}> ${label}</label>`;
 
   const body = `
   <h1>Mijn bedrijf &mdash; ${esc(c.naam)}</h1>
@@ -432,19 +436,36 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 
     <h2 style="margin-top:24px;">Materieel en specialisatie</h2>
     <div class="form-row">
-      <label>Type materieel dat we rijden</label>
+      <label>Ons materiaal</label>
       <div class="materieel-opties">
-        ${materieelCheckbox('combi', 'Combi')}
+        ${materieelCheckbox('volumecombi', '(Volume)combi')}
         ${materieelCheckbox('lzv', 'LZV')}
         ${materieelCheckbox('koelvries', 'Koel/vries-combi')}
+        ${materieelCheckbox('megatrailer', 'Mega trailer')}
         ${materieelCheckbox('standaard', 'Standaard trailer')}
-        ${materieelCheckbox('dubbeldekker', 'Dubbeldekker')}
         ${materieelCheckbox('anders', 'Anders')}
       </div>
     </div>
     <div class="form-row">
-      <label>Toelichting bij &ldquo;Anders&rdquo;</label>
+      <label>Toelichting bij &ldquo;Anders&rdquo; (materiaal)</label>
       <input type="text" name="materieel_anders" value="${esc(c.materieel_anders || '')}" placeholder="bijv. tankcontainer-chassis">
+    </div>
+    <div class="form-row" style="margin-top:12px;">
+      <label>Uitrusting</label>
+      <div class="materieel-opties">
+        ${uitrustingCheckbox('laadklep', 'Laadklep')}
+        ${uitrustingCheckbox('pompwagen', '(Elektrische) pompwagen')}
+        ${uitrustingCheckbox('dubbeldekvloer', 'Dubbeldekvloer')}
+        ${uitrustingCheckbox('dubbeldekbalken', 'Dubbeldekbalken')}
+        ${uitrustingCheckbox('oprijdplaten', 'Oprijdplaten')}
+        ${uitrustingCheckbox('kooiaap', 'Kooiaap')}
+        ${uitrustingCheckbox('houtrongen', 'Houtrongen')}
+        ${uitrustingCheckbox('anders', 'Anders')}
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Toelichting bij &ldquo;Anders&rdquo; (uitrusting)</label>
+      <input type="text" name="uitrusting_anders" value="${esc(c.uitrusting_anders || '')}" placeholder="bijv. glijzeil">
     </div>
     <div class="form-row two-col">
       <button type="submit" style="flex:1;">Gegevens opslaan</button>
@@ -466,15 +487,17 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 
 app.post('/mijn-bedrijf/bewerken', requireLogin, ah(async (req, res) => {
   const materieel = Array.isArray(req.body.materieel) ? req.body.materieel : (req.body.materieel ? [req.body.materieel] : []);
+  const uitrusting = Array.isArray(req.body.uitrusting) ? req.body.uitrusting : (req.body.uitrusting ? [req.body.uitrusting] : []);
   await pool.query(
     `UPDATE companies SET adres=$1, postcode=$2, plaats=$3, land=$4, contactpersoon_naam=$5, contactpersoon_telefoon=$6,
       contactpersoon_email=$7, algemeen_telefoon=$8, algemeen_email=$9, website=$10, kvk=$11, omschrijving=$12,
-      materieel=$13, materieel_anders=$14, bank=$15, iban=$16, bic=$17, btw_nummer=$18 WHERE id=$19`,
+      materieel=$13, materieel_anders=$14, bank=$15, iban=$16, bic=$17, btw_nummer=$18, uitrusting=$19, uitrusting_anders=$20 WHERE id=$21`,
     [req.body.adres || '', req.body.postcode || '', req.body.plaats || '', req.body.land || '',
      req.body.contactpersoon_naam || '', req.body.contactpersoon_telefoon || '', req.body.contactpersoon_email || '',
      req.body.algemeen_telefoon || '', req.body.algemeen_email || '', req.body.website || '', req.body.kvk || '',
      req.body.omschrijving || '', materieel.join(','), req.body.materieel_anders || '',
-     req.body.bank || '', req.body.iban || '', req.body.bic || '', req.body.btw_nummer || '', req.bedrijf.id]
+     req.body.bank || '', req.body.iban || '', req.body.bic || '', req.body.btw_nummer || '',
+     uitrusting.join(','), req.body.uitrusting_anders || '', req.bedrijf.id]
   );
   res.redirect('/mijn-bedrijf?opgeslagen=1');
 }));
