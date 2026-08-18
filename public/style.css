@@ -176,6 +176,8 @@ button {
 }
 button:hover { background: #092f4d; }
 .reset-link { margin-left: 10px; font-size: 0.85rem; color: var(--grijs); }
+.link-btn { display: inline-block; background: var(--blauw); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; text-decoration: none; }
+.link-btn:hover { background: #092f4d; }
 
 table.offers {
           width: 100%;
