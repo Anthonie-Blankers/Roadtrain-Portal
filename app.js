@@ -40,6 +40,18 @@ async function migreer() {
     );
   `);
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS sjablonen (
+      id TEXT PRIMARY KEY,
+      bedrijf_id TEXT NOT NULL,
+      type TEXT,
+      van_land TEXT, van_postcode TEXT, van_plaats TEXT,
+      naar_land TEXT, naar_postcode TEXT, naar_plaats TEXT,
+      laadmeter TEXT, hoogte TEXT, gewicht TEXT,
+      type_lading TEXT, opmerking TEXT,
+      aangemaakt_op TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS offers (
       id TEXT PRIMARY KEY,
       type TEXT,
@@ -897,7 +909,22 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
 }));
 
 // ---------- nieuwe aanbieding: gedeelde formulier-renderer ----------
-function nieuwFormBody(modus, bedrijf) {
+function labelSjablonen(sjablonen) {
+  const routeCount = {};
+  sjablonen.forEach(s => { const key = s.van_plaats + '|' + s.naar_plaats; routeCount[key] = (routeCount[key] || 0) + 1; });
+  return sjablonen.map(s => {
+    const key = s.van_plaats + '|' + s.naar_plaats;
+    let label = `${s.van_plaats} \u2192 ${s.naar_plaats}`;
+    if (routeCount[key] > 1) {
+      const extra = [s.laadmeter ? `${s.laadmeter}lm` : '', s.gewicht ? `${s.gewicht}t` : ''].filter(Boolean).join(' / ');
+      if (extra) label += ` (${extra})`;
+    }
+    return Object.assign({}, s, { label });
+  });
+}
+
+function nieuwFormBody(modus, bedrijf, sjablonen) {
+  sjablonen = sjablonen || [];
   const isCapaciteit = modus === 'capaciteit'; const vandaag = new Date().toISOString().slice(0, 10); const nb = new Date(); nb.setDate(nb.getDate() + 1); if (nb.getDay() === 6) nb.setDate(nb.getDate() + 2); else if (nb.getDay() === 0) nb.setDate(nb.getDate() + 1); const losdatumDefault = nb.toISOString().slice(0, 10);
   const typeWaarde = isCapaciteit ? 'ruimte' : 'vracht';
   const titel = isCapaciteit ? 'Capaciteit aanbieden' : 'Vracht aanbieden';
@@ -925,6 +952,18 @@ function nieuwFormBody(modus, bedrijf) {
   <p class="form-intro">${intro}</p>
   <form class="offer-form" method="post" action="/nieuw">
     <input type="hidden" name="type" value="${typeWaarde}">
+    ${sjablonen.length ? `<div class="form-row">
+      <label>Sjabloon toepassen (optioneel)</label>
+      <select id="sjabloon-select" onchange="pasSjabloonToe(this)">
+        <option value="">Geen &ndash; nieuwe aanbieding</option>
+        ${sjablonen.map(s => `<option value="${esc(s.id)}"
+          data-van-land="${esc(s.van_land || '')}" data-van-postcode="${esc(s.van_postcode || '')}" data-van-plaats="${esc(s.van_plaats || '')}"
+          data-naar-land="${esc(s.naar_land || '')}" data-naar-postcode="${esc(s.naar_postcode || '')}" data-naar-plaats="${esc(s.naar_plaats || '')}"
+          data-laadmeter="${esc(s.laadmeter || '')}" data-hoogte="${esc(s.hoogte || '')}" data-gewicht="${esc(s.gewicht || '')}"
+          data-type-lading="${esc(s.type_lading || '')}" data-opmerking="${esc(s.opmerking || '')}"
+          >${esc(s.label)}</option>`).join('')}
+      </select>
+    </div>` : ''}
     <div class="form-row two-col">
       <div>
         <label>Van &ndash; land</label>
@@ -1010,19 +1049,46 @@ function nieuwFormBody(modus, bedrijf) {
       </div>
     </div>
     <div class="form-row">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+        <input type="checkbox" name="sjabloon_opslaan" value="1" style="width:auto;">
+        Bewaar deze combinatie als sjabloon voor de volgende keer
+      </label>
+    </div>
+    <div class="form-row">
       <button type="submit">Plaatsen</button>
     </div>
   </form>
+  <script>
+    function pasSjabloonToe(sel) {
+      const opt = sel.options[sel.selectedIndex];
+      if (!opt.value) return;
+      const form = sel.closest('form');
+      const zet = (naam, val) => { const el = form.querySelector('[name="' + naam + '"]'); if (el && val) el.value = val; };
+      zet('van_land', opt.dataset.vanLand);
+      zet('van_postcode', opt.dataset.vanPostcode);
+      zet('van_plaats', opt.dataset.vanPlaats);
+      zet('naar_land', opt.dataset.naarLand);
+      zet('naar_postcode', opt.dataset.naarPostcode);
+      zet('naar_plaats', opt.dataset.naarPlaats);
+      zet('laadmeter', opt.dataset.laadmeter);
+      zet('hoogte', opt.dataset.hoogte);
+      zet('gewicht', opt.dataset.gewicht);
+      zet('type_lading', opt.dataset.typeLading);
+      zet('opmerking', opt.dataset.opmerking);
+    }
+  </script>
   `;
 }
 
-app.get('/nieuw/vracht', requireLogin, (req, res) => {
-  res.send(layout(req, 'Combi-Match - Vracht aanbieden', nieuwFormBody('vracht', req.bedrijf)));
-});
+app.get('/nieuw/vracht', requireLogin, ah(async (req, res) => {
+  const { rows: sjablonenRuw } = await pool.query('SELECT * FROM sjablonen WHERE bedrijf_id = $1 AND type = $2 ORDER BY aangemaakt_op DESC', [req.bedrijf.id, 'vracht']);
+  res.send(layout(req, 'Combi-Match - Vracht aanbieden', nieuwFormBody('vracht', req.bedrijf, labelSjablonen(sjablonenRuw))));
+}));
 
-app.get('/nieuw/capaciteit', requireLogin, (req, res) => {
-  res.send(layout(req, 'Combi-Match - Capaciteit aanbieden', nieuwFormBody('capaciteit', req.bedrijf)));
-});
+app.get('/nieuw/capaciteit', requireLogin, ah(async (req, res) => {
+  const { rows: sjablonenRuw } = await pool.query('SELECT * FROM sjablonen WHERE bedrijf_id = $1 AND type = $2 ORDER BY aangemaakt_op DESC', [req.bedrijf.id, 'ruimte']);
+  res.send(layout(req, 'Combi-Match - Capaciteit aanbieden', nieuwFormBody('capaciteit', req.bedrijf, labelSjablonen(sjablonenRuw))));
+}));
 
 // oude link blijft werken
 app.get('/nieuw', requireLogin, (req, res) => res.redirect('/nieuw/vracht'));
@@ -1070,6 +1136,16 @@ app.post('/nieuw', requireLogin, ah(async (req, res) => {
      offer.laadmeter, offer.hoogte, offer.gewicht, offer.type_lading, offer.opmerking,
      offer.bedrijf, offer.contactpersoon, offer.telefoon, offer.email, offer.status, offer.bedrijf_id, offer.laadtijd_van, offer.laadtijd_tot, offer.lostijd_van, offer.lostijd_tot]
   );
+
+  if (req.body.sjabloon_opslaan === '1') {
+    await pool.query(
+      `INSERT INTO sjablonen (id, bedrijf_id, type, van_land, van_postcode, van_plaats, naar_land, naar_postcode, naar_plaats, laadmeter, hoogte, gewicht, type_lading, opmerking)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+      [crypto.randomUUID(), offer.bedrijf_id, offer.type, offer.van_land, offer.van_postcode, offer.van_plaats,
+       offer.naar_land, offer.naar_postcode, offer.naar_plaats, offer.laadmeter, offer.hoogte, offer.gewicht,
+       offer.type_lading, offer.opmerking]
+    );
+  }
 
   const body = `
     <h1>Aanbieding geplaatst</h1>
