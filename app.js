@@ -952,18 +952,22 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
   <p class="form-intro">${intro}</p>
   <form class="offer-form" method="post" action="/nieuw">
     <input type="hidden" name="type" value="${typeWaarde}">
-    ${sjablonen.length ? `<div class="form-row">
-      <label>Sjabloon toepassen (optioneel)</label>
-      <select id="sjabloon-select" onchange="pasSjabloonToe(this)">
-        <option value="">Geen &ndash; nieuwe aanbieding</option>
-        ${sjablonen.map(s => `<option value="${esc(s.id)}"
-          data-van-land="${esc(s.van_land || '')}" data-van-postcode="${esc(s.van_postcode || '')}" data-van-plaats="${esc(s.van_plaats || '')}"
-          data-naar-land="${esc(s.naar_land || '')}" data-naar-postcode="${esc(s.naar_postcode || '')}" data-naar-plaats="${esc(s.naar_plaats || '')}"
-          data-laadmeter="${esc(s.laadmeter || '')}" data-hoogte="${esc(s.hoogte || '')}" data-gewicht="${esc(s.gewicht || '')}"
-          data-type-lading="${esc(s.type_lading || '')}" data-opmerking="${esc(s.opmerking || '')}"
-          >${esc(s.label)}</option>`).join('')}
-      </select>
-    </div>` : ''}
+    ${sjablonen.length ? `<div class="form-row" style="display:flex; align-items:flex-end; gap:12px;">
+      <div style="flex:1;">
+        <label>Sjabloon toepassen (optioneel)</label>
+        <select id="sjabloon-select" onchange="pasSjabloonToe(this)">
+          <option value="">Geen &ndash; nieuwe aanbieding</option>
+          ${sjablonen.map(s => `<option value="${esc(s.id)}"
+            data-van-land="${esc(s.van_land || '')}" data-van-postcode="${esc(s.van_postcode || '')}" data-van-plaats="${esc(s.van_plaats || '')}"
+            data-naar-land="${esc(s.naar_land || '')}" data-naar-postcode="${esc(s.naar_postcode || '')}" data-naar-plaats="${esc(s.naar_plaats || '')}"
+            data-laadmeter="${esc(s.laadmeter || '')}" data-hoogte="${esc(s.hoogte || '')}" data-gewicht="${esc(s.gewicht || '')}"
+            data-type-lading="${esc(s.type_lading || '')}" data-opmerking="${esc(s.opmerking || '')}"
+            >${esc(s.label)}</option>`).join('')}
+        </select>
+      </div>
+      <a href="#" id="sjabloon-verwijder-link" class="link-danger" style="display:none; white-space:nowrap; padding-bottom:10px;" onclick="return verwijderSjabloon()">Sjabloon verwijderen</a>
+    </div>
+    <form id="sjabloon-verwijder-form" method="post" action="" style="display:none;"></form>` : ''}
     <div class="form-row two-col">
       <div>
         <label>Van &ndash; land</label>
@@ -1061,6 +1065,11 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
   <script>
     function pasSjabloonToe(sel) {
       const opt = sel.options[sel.selectedIndex];
+      const verwijderLink = document.getElementById('sjabloon-verwijder-link');
+      if (verwijderLink) {
+        if (opt.value) { verwijderLink.style.display = 'inline'; verwijderLink.dataset.id = opt.value; }
+        else { verwijderLink.style.display = 'none'; verwijderLink.dataset.id = ''; }
+      }
       if (!opt.value) return;
       const form = sel.closest('form');
       const zet = (naam, val) => { const el = form.querySelector('[name="' + naam + '"]'); if (el && val) el.value = val; };
@@ -1076,9 +1085,24 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
       zet('type_lading', opt.dataset.typeLading);
       zet('opmerking', opt.dataset.opmerking);
     }
+    function verwijderSjabloon() {
+      const link = document.getElementById('sjabloon-verwijder-link');
+      const id = link && link.dataset.id;
+      if (!id) return false;
+      if (!confirm('Dit sjabloon verwijderen? Dit kan niet ongedaan worden gemaakt.')) return false;
+      const form = document.getElementById('sjabloon-verwijder-form');
+      form.action = '/sjabloon/' + id + '/verwijderen';
+      form.submit();
+      return false;
+    }
   </script>
   `;
 }
+
+app.post('/sjabloon/:id/verwijderen', requireLogin, ah(async (req, res) => {
+  await pool.query('DELETE FROM sjablonen WHERE id = $1 AND bedrijf_id = $2', [req.params.id, req.bedrijf.id]);
+  res.redirect(req.get('Referer') || '/nieuw/vracht');
+}));
 
 app.get('/nieuw/vracht', requireLogin, ah(async (req, res) => {
   const { rows: sjablonenRuw } = await pool.query('SELECT * FROM sjablonen WHERE bedrijf_id = $1 AND type = $2 ORDER BY aangemaakt_op DESC', [req.bedrijf.id, 'vracht']);
