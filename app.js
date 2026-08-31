@@ -966,8 +966,7 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
         </select>
       </div>
       <a href="#" id="sjabloon-verwijder-link" class="link-danger" style="display:none; white-space:nowrap; padding-bottom:10px;" onclick="return verwijderSjabloon()">Sjabloon verwijderen</a>
-    </div>
-    <form id="sjabloon-verwijder-form" method="post" action="" style="display:none;"></form>` : ''}
+    </div>` : ''}
     <div class="form-row two-col">
       <div>
         <label>Van &ndash; land</label>
@@ -1062,6 +1061,7 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
       <button type="submit">Plaatsen</button>
     </div>
   </form>
+  <form id="sjabloon-verwijder-form" method="post" action="" style="display:none;"></form>
   <script>
     function pasSjabloonToe(sel) {
       const opt = sel.options[sel.selectedIndex];
