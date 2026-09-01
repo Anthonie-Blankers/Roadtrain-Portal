@@ -1376,12 +1376,23 @@ app.get('/admin/login', (req, res) => {
     <input type="hidden" name="next" value="${esc(next)}">
     <div class="form-row">
       <label>Beheerderswachtwoord</label>
-      <input type="password" name="wachtwoord" required autofocus>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <input type="password" id="wachtwoord-veld" name="wachtwoord" required autofocus style="flex:1;">
+        <a href="#" onclick="return toonWachtwoord(this)" style="white-space:nowrap; font-size:0.8rem; color:var(--grijs); text-decoration:underline;">Toon</a>
+      </div>
     </div>
     <div class="form-row">
       <button type="submit">Inloggen</button>
     </div>
   </form>
+  <script>
+    function toonWachtwoord(el) {
+      const veld = document.getElementById('wachtwoord-veld');
+      if (veld.type === 'password') { veld.type = 'text'; el.textContent = 'Verberg'; }
+      else { veld.type = 'password'; el.textContent = 'Toon'; }
+      return false;
+    }
+  </script>
   `;
   res.send(layout(req, 'Combi-Match - Beheer inloggen', body));
 });
