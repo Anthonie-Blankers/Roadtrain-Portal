@@ -13,7 +13,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '3mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const LANDEN = [
@@ -89,6 +89,7 @@ async function migreer() {
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS btw_nummer TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS aantal_combis TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS oprichtingsjaar TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_data TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS profiel_zichtbaar BOOLEAN NOT NULL DEFAULT false`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS zichtbare_velden TEXT`);
   await pool.query(`
@@ -424,6 +425,21 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       <label>Bedrijfsnaam</label>
       <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
     </div>
+    <div class="form-row">
+      <label>Logo</label>
+      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+        <div style="width:160px; height:160px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+          <img id="logo-preview-img" src="${c.logo_data ? esc(c.logo_data) : ''}" style="max-width:100%; max-height:100%; object-fit:contain; display:${c.logo_data ? 'block' : 'none'};">
+          <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.8rem; text-align:center; padding:8px;">Geen logo</span>
+        </div>
+        <div>
+          <input type="file" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)">
+          <div style="margin-top:8px; font-size:0.8rem; color:var(--grijs);">PNG of JPG, max 3MB. Wordt automatisch passend gemaakt in een vast vakje.</div>
+          <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline-block' : 'none'}; margin-top:6px;">Logo verwijderen</a>
+        </div>
+      </div>
+      <input type="hidden" name="logo_data" id="logo-data-veld" value="${c.logo_data ? esc(c.logo_data) : ''}">
+    </div>
     <div class="form-row two-col">
       <div><label>Adres</label><input type="text" name="adres" value="${esc(c.adres || '')}"></div>
       <div><label>Postcode</label><input type="text" name="postcode" value="${esc(c.postcode || '')}"></div>
@@ -517,6 +533,48 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       <a href="${esc(briefhoofdMailtoLink(c))}" class="link-btn-outline" style="flex:1; text-align:center;">Briefhoofd versturen</a>
     </div>
   </form>
+  <script>
+    function verwerkLogoUpload(input) {
+      const bestand = input.files && input.files[0];
+      if (!bestand) return;
+      if (!['image/png', 'image/jpeg'].includes(bestand.type)) { alert('Alleen PNG of JPG toegestaan.'); input.value = ''; return; }
+      if (bestand.size > 3 * 1024 * 1024) { alert('Bestand is te groot (max 3MB).'); input.value = ''; return; }
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          const maxAfmeting = 400;
+          let w = img.width, h = img.height;
+          if (w > maxAfmeting || h > maxAfmeting) {
+            if (w > h) { h = Math.round(h * maxAfmeting / w); w = maxAfmeting; }
+            else { w = Math.round(w * maxAfmeting / h); h = maxAfmeting; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/png');
+          document.getElementById('logo-data-veld').value = dataUrl;
+          const previewImg = document.getElementById('logo-preview-img');
+          previewImg.src = dataUrl;
+          previewImg.style.display = 'block';
+          document.getElementById('logo-preview-placeholder').style.display = 'none';
+          document.getElementById('logo-verwijder-link').style.display = 'inline-block';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(bestand);
+    }
+    function verwijderLogo() {
+      document.getElementById('logo-data-veld').value = '';
+      const previewImg = document.getElementById('logo-preview-img');
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+      document.getElementById('logo-preview-placeholder').style.display = 'flex';
+      document.getElementById('logo-verwijder-link').style.display = 'none';
+      return false;
+    }
+  </script>
 
   <h2 style="margin-top:32px;">Jouw ritregels (${ritregels.length}/4)</h2>
   <p class="form-intro">Ritregels die aan staan, zijn zichtbaar voor andere bedrijven bij &ldquo;Structureel gezocht&rdquo; op het overzicht.</p>
@@ -535,18 +593,20 @@ app.post('/mijn-bedrijf/bewerken', requireLogin, ah(async (req, res) => {
   const uitrusting = Array.isArray(req.body.uitrusting) ? req.body.uitrusting : (req.body.uitrusting ? [req.body.uitrusting] : []);
   const zichtbareVelden = Array.isArray(req.body.zichtbare_velden) ? req.body.zichtbare_velden : (req.body.zichtbare_velden ? [req.body.zichtbare_velden] : []);
   const profielZichtbaar = req.body.profiel_zichtbaar === '1';
+  const logoDataRuw = (req.body.logo_data || '').trim();
+  const logoData = (logoDataRuw === '' || (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(logoDataRuw) && logoDataRuw.length <= 4500000)) ? logoDataRuw : '';
   await pool.query(
     `UPDATE companies SET adres=$1, postcode=$2, plaats=$3, land=$4, contactpersoon_naam=$5, contactpersoon_telefoon=$6,
       contactpersoon_email=$7, algemeen_telefoon=$8, algemeen_email=$9, website=$10, kvk=$11, omschrijving=$12,
       materieel=$13, materieel_anders=$14, bank=$15, iban=$16, bic=$17, btw_nummer=$18, uitrusting=$19, uitrusting_anders=$20,
-      aantal_combis=$21, oprichtingsjaar=$22, profiel_zichtbaar=$23, zichtbare_velden=$24 WHERE id=$25`,
+      aantal_combis=$21, oprichtingsjaar=$22, profiel_zichtbaar=$23, zichtbare_velden=$24, logo_data=$25 WHERE id=$26`,
     [req.body.adres || '', req.body.postcode || '', req.body.plaats || '', req.body.land || '',
      req.body.contactpersoon_naam || '', req.body.contactpersoon_telefoon || '', req.body.contactpersoon_email || '',
      req.body.algemeen_telefoon || '', req.body.algemeen_email || '', req.body.website || '', req.body.kvk || '',
      req.body.omschrijving || '', materieel.join(','), req.body.materieel_anders || '',
      req.body.bank || '', req.body.iban || '', req.body.bic || '', req.body.btw_nummer || '',
      uitrusting.join(','), req.body.uitrusting_anders || '',
-     req.body.aantal_combis || '', req.body.oprichtingsjaar || '', profielZichtbaar, zichtbareVelden.join(','), req.bedrijf.id]
+     req.body.aantal_combis || '', req.body.oprichtingsjaar || '', profielZichtbaar, zichtbareVelden.join(','), logoData, req.bedrijf.id]
   );
   res.redirect('/mijn-bedrijf?opgeslagen=1');
 }));
