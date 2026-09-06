@@ -421,21 +421,23 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 
   <h2>Bedrijfsgegevens</h2>
   <form class="offer-form" method="post" action="/mijn-bedrijf/bewerken">
-    <div class="form-row">
-      <label>Bedrijfsnaam</label>
-      <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
-    </div>
-    <div class="form-row">
-      <label>Logo</label>
-      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-        <div style="width:160px; height:160px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
-          <img id="logo-preview-img" src="${c.logo_data ? esc(c.logo_data) : ''}" style="max-width:100%; max-height:100%; object-fit:contain; display:${c.logo_data ? 'block' : 'none'};">
-          <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.8rem; text-align:center; padding:8px;">Geen logo</span>
-        </div>
-        <div>
-          <input type="file" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)">
-          <div style="margin-top:8px; font-size:0.8rem; color:var(--grijs);">PNG of JPG, max 3MB. Wordt automatisch passend gemaakt in een vast vakje.</div>
-          <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline-block' : 'none'}; margin-top:6px;">Logo verwijderen</a>
+    <div class="form-row two-col">
+      <div>
+        <label>Bedrijfsnaam</label>
+        <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
+      </div>
+      <div>
+        <label>Logo</label>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:72px; height:72px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+            <img id="logo-preview-img" src="${c.logo_data ? esc(c.logo_data) : ''}" style="max-width:100%; max-height:100%; object-fit:contain; display:${c.logo_data ? 'block' : 'none'};">
+            <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.6rem; text-align:center; padding:4px;">Geen logo</span>
+          </div>
+          <div>
+            <input type="file" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="max-width:180px;">
+            <div style="margin-top:4px; font-size:0.75rem; color:var(--grijs);">PNG/JPG, max 3MB</div>
+            <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline-block' : 'none'}; font-size:0.8rem;">Logo verwijderen</a>
+          </div>
         </div>
       </div>
       <input type="hidden" name="logo_data" id="logo-data-veld" value="${c.logo_data ? esc(c.logo_data) : ''}">
