@@ -421,20 +421,20 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 
   <h2>Bedrijfsgegevens</h2>
   <form class="offer-form" method="post" action="/mijn-bedrijf/bewerken">
-    <div class="form-row" style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;">
-      <div style="flex:1 1 200px; min-width:180px;">
+    <div class="form-row two-col">
+      <div>
         <label>Bedrijfsnaam</label>
         <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
       </div>
-      <div style="flex:2 1 280px; min-width:260px;">
+      <div>
         <label>Logo</label>
-        <div style="display:flex; align-items:center; gap:14px;">
-          <div style="width:96px; height:96px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:72px; height:72px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
             <img id="logo-preview-img" src="${c.logo_data ? esc(c.logo_data) : ''}" style="max-width:100%; max-height:100%; object-fit:contain; display:${c.logo_data ? 'block' : 'none'};">
-            <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.65rem; text-align:center; padding:4px;">Geen logo</span>
+            <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.6rem; text-align:center; padding:4px;">Geen logo</span>
           </div>
-          <div style="flex:1; min-width:0;">
-            <input type="file" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="width:100%;">
+          <div>
+            <input type="file" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="max-width:100%; width:auto;">
             <div style="margin-top:4px; font-size:0.75rem; color:var(--grijs);">PNG/JPG, max 3MB</div>
             <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline-block' : 'none'}; font-size:0.8rem;">Logo verwijderen</a>
           </div>
