@@ -669,7 +669,7 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
 
   const body = `
   ${kopBlok}
-  ${heeft('locatie') && (c.plaats || c.land) ? `<p class="form-intro">${[esc(c.plaats), c.land ? landNaam(c.land) : ''].filter(Boolean).join(', ')}</p>` : ''}
+  ${heeft('locatie') && (c.plaats || c.land) ? `<p class="form-intro"${logoBlok ? ' style="margin-top:16px;"' : ''}>${[esc(c.plaats), c.land ? landNaam(c.land) : ''].filter(Boolean).join(', ')}</p>` : ''}
 
   ${(heeft('combis') && c.aantal_combis) || (heeft('oprichtingsjaar') && c.oprichtingsjaar) || (heeft('kvk') && c.kvk) ? `<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:10px; font-size:0.9rem;">
     ${heeft('combis') && c.aantal_combis ? `<div><span style="color:var(--grijs);">Aantal combi&rsquo;s &middot; </span>${esc(c.aantal_combis)}</div>` : ''}
