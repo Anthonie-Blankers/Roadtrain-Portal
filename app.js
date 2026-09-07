@@ -421,23 +421,13 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 
   <h2>Bedrijfsgegevens</h2>
   <form class="offer-form" method="post" action="/mijn-bedrijf/bewerken">
-    <div class="form-row" style="display:flex; flex-direction:row; gap:16px;">
-      <div style="flex:1; display:flex; flex-direction:column; gap:16px;">
-        <div style="display:flex; flex-direction:column; gap:4px;">
+    <div class="form-row" style="display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; flex-direction:row; gap:16px;">
+        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
           <label>Bedrijfsnaam</label>
           <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
         </div>
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <label>Adres</label>
-          <input type="text" name="adres" value="${esc(c.adres || '')}">
-        </div>
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <label>Postcode</label>
-          <input type="text" name="postcode" value="${esc(c.postcode || '')}">
-        </div>
-      </div>
-      <div style="flex:1; display:flex; flex-direction:column; gap:16px;">
-        <div style="display:flex; flex-direction:column; gap:4px;">
+        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
           <label>Logo</label>
           <div style="display:flex; align-items:center; gap:16px;">
             <div style="width:130px; height:130px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
@@ -451,7 +441,20 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
             <input type="file" id="logo-file-input" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="display:none;">
           </div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:4px;">
+      </div>
+      <div style="display:flex; flex-direction:row; gap:16px;">
+        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+          <label>Adres</label>
+          <input type="text" name="adres" value="${esc(c.adres || '')}">
+        </div>
+        <div style="flex:1;"></div>
+      </div>
+      <div style="display:flex; flex-direction:row; gap:16px;">
+        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+          <label>Postcode</label>
+          <input type="text" name="postcode" value="${esc(c.postcode || '')}">
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
           <label>Plaats</label>
           <input type="text" name="plaats" value="${esc(c.plaats || '')}">
         </div>
