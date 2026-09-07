@@ -455,13 +455,15 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
           <label>Plaats</label>
           <input type="text" name="plaats" value="${esc(c.plaats || '')}">
         </div>
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <label>Land</label>
-          <select name="land">${landOptions(c.land, true)}</select>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <label>Website</label>
-          <input type="text" name="website" value="${esc(c.website || '')}">
+        <div style="display:flex; flex-direction:row; gap:16px;">
+          <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+            <label>Land</label>
+            <select name="land">${landOptions(c.land, true)}</select>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+            <label>Website</label>
+            <input type="text" name="website" value="${esc(c.website || '')}">
+          </div>
         </div>
       </div>
       <input type="hidden" name="logo_data" id="logo-data-veld" value="${c.logo_data ? esc(c.logo_data) : ''}">
