@@ -662,7 +662,7 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
   const chip = (t) => `<span class="materieel-optie" style="background:var(--blauw-licht); color:var(--blauw); padding:4px 10px; border-radius:5px;">${esc(t)}</span>`;
 
   const websiteHref = c.website ? (/^https?:\/\//i.test(c.website) ? c.website : `https://${c.website}`) : '';
-  const logoBlok = c.logo_data ? `<img src="${esc(c.logo_data)}" alt="Logo ${esc(c.naam)}" style="max-width:90px; max-height:90px; object-fit:contain; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; padding:4px;">` : '';
+  const logoBlok = c.logo_data ? `<div style="width:130px; height:130px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;"><img src="${esc(c.logo_data)}" alt="Logo ${esc(c.naam)}" style="max-width:100%; max-height:100%; object-fit:contain;"></div>` : '';
   const kopBlok = logoBlok
     ? `<div style="display:flex; align-items:center; gap:16px;">${websiteHref ? `<a href="${esc(websiteHref)}" target="_blank" rel="noopener noreferrer">${logoBlok}</a>` : logoBlok}<h1 style="margin:0;">${esc(c.naam)}</h1></div>`
     : `<h1>${esc(c.naam)}</h1>`;
