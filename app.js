@@ -421,55 +421,73 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 
   <h2>Bedrijfsgegevens</h2>
   <form class="offer-form" method="post" action="/mijn-bedrijf/bewerken">
-    <div class="form-row two-col">
-      <div>
-        <label>Bedrijfsnaam</label>
-        <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
+    <div class="form-row" style="display:flex; flex-direction:row; gap:16px;">
+      <div style="flex:1; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label>Bedrijfsnaam</label>
+          <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label>Adres</label>
+          <input type="text" name="adres" value="${esc(c.adres || '')}">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label>Postcode</label>
+          <input type="text" name="postcode" value="${esc(c.postcode || '')}">
+        </div>
       </div>
-      <div>
-        <label>Logo</label>
-        <div style="display:flex; align-items:center; gap:16px;">
-          <div style="width:130px; height:130px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
-            <img id="logo-preview-img" src="${c.logo_data ? esc(c.logo_data) : ''}" style="max-width:100%; max-height:100%; object-fit:contain; display:${c.logo_data ? 'block' : 'none'};">
-            <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.7rem; text-align:center; padding:8px;">Geen logo</span>
+      <div style="flex:1; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label>Logo</label>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div style="width:130px; height:130px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+              <img id="logo-preview-img" src="${c.logo_data ? esc(c.logo_data) : ''}" style="max-width:100%; max-height:100%; object-fit:contain; display:${c.logo_data ? 'block' : 'none'};">
+              <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.7rem; text-align:center; padding:8px;">Geen logo</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <a href="#" onclick="document.getElementById('logo-file-input').click(); return false;" class="link-muted">Logo toevoegen</a>
+              <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline' : 'none'};">Logo verwijderen</a>
+            </div>
+            <input type="file" id="logo-file-input" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="display:none;">
           </div>
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <a href="#" onclick="document.getElementById('logo-file-input').click(); return false;" class="link-muted">Logo toevoegen</a>
-            <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline' : 'none'};">Logo verwijderen</a>
-          </div>
-          <input type="file" id="logo-file-input" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="display:none;">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label>Plaats</label>
+          <input type="text" name="plaats" value="${esc(c.plaats || '')}">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label>Land</label>
+          <select name="land">${landOptions(c.land, true)}</select>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label>Website</label>
+          <input type="text" name="website" value="${esc(c.website || '')}">
         </div>
       </div>
       <input type="hidden" name="logo_data" id="logo-data-veld" value="${c.logo_data ? esc(c.logo_data) : ''}">
     </div>
     <div class="form-row two-col">
-      <div><label>Adres</label><input type="text" name="adres" value="${esc(c.adres || '')}"></div>
-      <div><label>Postcode</label><input type="text" name="postcode" value="${esc(c.postcode || '')}"></div>
-    </div>
-    <div class="form-row two-col">
-      <div><label>Plaats</label><input type="text" name="plaats" value="${esc(c.plaats || '')}"></div>
-      <div><label>Land</label><select name="land">${landOptions(c.land, true)}</select></div>
-    </div>
-    <div class="form-row two-col">
-      <div><label>Aantal combi's</label><input type="number" name="aantal_combis" min="0" value="${esc(c.aantal_combis || '')}"></div>
       <div><label>Oprichtingsjaar</label><input type="number" name="oprichtingsjaar" min="1800" max="2100" value="${esc(c.oprichtingsjaar || '')}"></div>
+      <div><label>Aantal combi's</label><input type="number" name="aantal_combis" min="0" value="${esc(c.aantal_combis || '')}"></div>
     </div>
     <div class="form-row two-col">
       <div><label>Contactpersoon &ndash; naam</label><input type="text" name="contactpersoon_naam" value="${esc(c.contactpersoon_naam || '')}"></div>
-      <div><label>Contactpersoon &ndash; telefoon</label><input type="text" name="contactpersoon_telefoon" value="${esc(c.contactpersoon_telefoon || '')}"></div>
+      <div><label>Contactpersoon &ndash; e-mail</label><input type="email" name="contactpersoon_email" value="${esc(c.contactpersoon_email || '')}"></div>
     </div>
-    <div class="form-row">
-      <label>Contactpersoon &ndash; e-mail</label>
-      <input type="email" name="contactpersoon_email" value="${esc(c.contactpersoon_email || '')}">
+    <div class="form-row two-col">
+      <div><label>Contactpersoon &ndash; telefoon</label><input type="text" name="contactpersoon_telefoon" value="${esc(c.contactpersoon_telefoon || '')}"></div>
+      <div><label>KVK-nummer</label><input type="text" name="kvk" value="${esc(c.kvk || '')}"></div>
     </div>
     <div class="form-row two-col">
       <div><label>Algemeen telefoonnummer</label><input type="text" name="algemeen_telefoon" value="${esc(c.algemeen_telefoon || '')}"></div>
       <div><label>Algemeen e-mailadres</label><input type="email" name="algemeen_email" value="${esc(c.algemeen_email || '')}"></div>
     </div>
-    <div class="form-row two-col">
-      <div><label>Website</label><input type="text" name="website" value="${esc(c.website || '')}"></div>
-      <div><label>KVK-nummer</label><input type="text" name="kvk" value="${esc(c.kvk || '')}"></div>
+    <div class="form-row">
+      <label>Korte omschrijving</label>
+      <input type="text" name="omschrijving" value="${esc(c.omschrijving || '')}" placeholder="bijv. Gespecialiseerd in gekoelde combi-transporten Nederland-Duitsland">
     </div>
+
+    <h2 style="margin-top:24px;">Financi&euml;le gegevens</h2>
     <div class="form-row two-col">
       <div><label>Bank</label><input type="text" name="bank" value="${esc(c.bank || '')}"></div>
       <div><label>BIC/Swift-code</label><input type="text" name="bic" value="${esc(c.bic || '')}"></div>
@@ -477,10 +495,6 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
     <div class="form-row two-col">
       <div><label>IBAN</label><input type="text" name="iban" value="${esc(c.iban || '')}"></div>
       <div><label>BTW-nummer</label><input type="text" name="btw_nummer" value="${esc(c.btw_nummer || '')}"></div>
-    </div>
-    <div class="form-row">
-      <label>Korte omschrijving</label>
-      <input type="text" name="omschrijving" value="${esc(c.omschrijving || '')}" placeholder="bijv. Gespecialiseerd in gekoelde combi-transporten Nederland-Duitsland">
     </div>
 
     <h2 style="margin-top:24px;">Materieel en specialisatie</h2>
