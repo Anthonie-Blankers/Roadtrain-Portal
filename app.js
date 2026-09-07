@@ -661,8 +661,14 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
   const uitrustingChips = (heeft('materieel') && (c.uitrusting || c.uitrusting_anders)) ? (c.uitrusting || '').split(',').filter(Boolean).map(u => ({laadklep:'Laadklep', pompwagen:'(Elektrische) pompwagen', dubbeldekvloer:'Dubbeldekvloer', dubbeldekbalken:'Dubbeldekbalken', oprijdplaten:'Oprijdplaten', kooiaap:'Kooiaap', houtrongen:'Houtrongen'}[u] || u)).concat(c.uitrusting_anders ? [c.uitrusting_anders] : []) : [];
   const chip = (t) => `<span class="materieel-optie" style="background:var(--blauw-licht); color:var(--blauw); padding:4px 10px; border-radius:5px;">${esc(t)}</span>`;
 
+  const websiteHref = c.website ? (/^https?:\/\//i.test(c.website) ? c.website : `https://${c.website}`) : '';
+  const logoBlok = c.logo_data ? `<img src="${esc(c.logo_data)}" alt="Logo ${esc(c.naam)}" style="max-width:90px; max-height:90px; object-fit:contain; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; padding:4px;">` : '';
+  const kopBlok = logoBlok
+    ? `<div style="display:flex; align-items:center; gap:16px;">${websiteHref ? `<a href="${esc(websiteHref)}" target="_blank" rel="noopener noreferrer">${logoBlok}</a>` : logoBlok}<h1 style="margin:0;">${esc(c.naam)}</h1></div>`
+    : `<h1>${esc(c.naam)}</h1>`;
+
   const body = `
-  <h1>${esc(c.naam)}</h1>
+  ${kopBlok}
   ${heeft('locatie') && (c.plaats || c.land) ? `<p class="form-intro">${[esc(c.plaats), c.land ? landNaam(c.land) : ''].filter(Boolean).join(', ')}</p>` : ''}
 
   ${(heeft('combis') && c.aantal_combis) || (heeft('oprichtingsjaar') && c.oprichtingsjaar) || (heeft('kvk') && c.kvk) ? `<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:10px; font-size:0.9rem;">
