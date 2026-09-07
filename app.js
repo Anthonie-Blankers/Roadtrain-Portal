@@ -428,12 +428,12 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       </div>
       <div>
         <label>Logo</label>
-        <div style="width:130px;">
+        <div>
           <div style="width:130px; height:130px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden;">
             <img id="logo-preview-img" src="${c.logo_data ? esc(c.logo_data) : ''}" style="max-width:100%; max-height:100%; object-fit:contain; display:${c.logo_data ? 'block' : 'none'};">
             <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.7rem; text-align:center; padding:8px;">Geen logo</span>
           </div>
-          <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
+          <div style="margin-top:8px; display:flex; flex-direction:row; gap:14px;">
             <a href="#" onclick="document.getElementById('logo-file-input').click(); return false;" class="link-muted">Logo toevoegen</a>
             <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline' : 'none'};">Logo verwijderen</a>
           </div>
