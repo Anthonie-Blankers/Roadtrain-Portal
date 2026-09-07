@@ -422,10 +422,16 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
   <h2>Bedrijfsgegevens</h2>
   <form class="offer-form" method="post" action="/mijn-bedrijf/bewerken">
     <div class="form-row" style="display:flex; flex-direction:column; gap:16px;">
-      <div style="display:flex; flex-direction:row; gap:16px;">
-        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-          <label>Bedrijfsnaam</label>
-          <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
+      <div style="display:flex; flex-direction:row; align-items:stretch; gap:16px;">
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:4px;">
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label>Bedrijfsnaam</label>
+            <input type="text" value="${esc(c.naam)}" readonly style="background:#f3f5f7;color:var(--grijs);">
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label>Adres</label>
+            <input type="text" name="adres" value="${esc(c.adres || '')}">
+          </div>
         </div>
         <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
           <label>Logo</label>
@@ -441,13 +447,6 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
             <input type="file" id="logo-file-input" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="display:none;">
           </div>
         </div>
-      </div>
-      <div style="display:flex; flex-direction:row; gap:16px;">
-        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-          <label>Adres</label>
-          <input type="text" name="adres" value="${esc(c.adres || '')}">
-        </div>
-        <div style="flex:1;"></div>
       </div>
       <div style="display:flex; flex-direction:row; gap:16px;">
         <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
