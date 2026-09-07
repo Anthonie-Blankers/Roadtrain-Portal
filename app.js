@@ -428,16 +428,16 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       </div>
       <div>
         <label>Logo</label>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div style="width:72px; height:72px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+        <div style="width:130px;">
+          <div style="width:130px; height:130px; border:1px solid var(--rand); border-radius:8px; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden;">
             <img id="logo-preview-img" src="${c.logo_data ? esc(c.logo_data) : ''}" style="max-width:100%; max-height:100%; object-fit:contain; display:${c.logo_data ? 'block' : 'none'};">
-            <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.6rem; text-align:center; padding:4px;">Geen logo</span>
+            <span id="logo-preview-placeholder" style="display:${c.logo_data ? 'none' : 'flex'}; color:var(--grijs); font-size:0.7rem; text-align:center; padding:8px;">Geen logo</span>
           </div>
-          <div>
-            <input type="file" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="max-width:100%; width:auto;">
-            <div style="margin-top:4px; font-size:0.75rem; color:var(--grijs);">PNG/JPG, max 3MB</div>
-            <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline-block' : 'none'}; font-size:0.8rem;">Logo verwijderen</a>
+          <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
+            <a href="#" onclick="document.getElementById('logo-file-input').click(); return false;" class="link-muted">Logo toevoegen</a>
+            <a href="#" id="logo-verwijder-link" onclick="return verwijderLogo()" class="link-danger" style="display:${c.logo_data ? 'inline' : 'none'};">Logo verwijderen</a>
           </div>
+          <input type="file" id="logo-file-input" accept="image/png,image/jpeg" onchange="verwerkLogoUpload(this)" style="display:none;">
         </div>
       </div>
       <input type="hidden" name="logo_data" id="logo-data-veld" value="${c.logo_data ? esc(c.logo_data) : ''}">
@@ -574,6 +574,8 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       previewImg.style.display = 'none';
       document.getElementById('logo-preview-placeholder').style.display = 'flex';
       document.getElementById('logo-verwijder-link').style.display = 'none';
+      const fileInput = document.getElementById('logo-file-input');
+      if (fileInput) fileInput.value = '';
       return false;
     }
   </script>
