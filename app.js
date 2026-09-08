@@ -92,6 +92,7 @@ async function migreer() {
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_data TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS profiel_zichtbaar BOOLEAN NOT NULL DEFAULT false`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS zichtbare_velden TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS laatst_actief TIMESTAMPTZ`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ritregels (
       id TEXT PRIMARY KEY,
@@ -152,6 +153,12 @@ function isAdminIngelogd(req) {
 app.use(async (req, res, next) => {
   try {
     req.ingelogdBedrijf = await getIngelogdBedrijf(req);
+    if (req.ingelogdBedrijf) {
+      const laatst = req.ingelogdBedrijf.laatst_actief ? new Date(req.ingelogdBedrijf.laatst_actief).getTime() : 0;
+      if (Date.now() - laatst > 60000) {
+        pool.query('UPDATE companies SET laatst_actief = now() WHERE id = $1', [req.ingelogdBedrijf.id]).catch(() => {});
+      }
+    }
   } catch (e) {
     req.ingelogdBedrijf = null;
   }
@@ -1493,6 +1500,18 @@ app.get('/admin/uitloggen', (req, res) => {
   res.redirect('/');
 });
 
+function tijdGeleden(datum) {
+  if (!datum) return null;
+  const ms = Date.now() - new Date(datum).getTime();
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return 'zojuist';
+  if (min < 60) return `${min} min geleden`;
+  const uur = Math.floor(min / 60);
+  if (uur < 24) return `${uur} uur geleden`;
+  const dag = Math.floor(uur / 24);
+  return `${dag} dag${dag === 1 ? '' : 'en'} geleden`;
+}
+
 app.get('/admin', requireAdmin, ah(async (req, res) => {
   const { rows: companies } = await pool.query('SELECT * FROM companies');
   companies.sort((a, b) => new Date(b.aangemaakt_op) - new Date(a.aangemaakt_op));
@@ -1500,12 +1519,16 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
 
   const { rows: weesAanbiedingen } = await pool.query('SELECT * FROM offers WHERE bedrijf_id IS NULL'); const { rows: alleAanbiedingen } = await pool.query('SELECT * FROM offers'); const mailOverzicht = buildMailOverzicht(alleAanbiedingen);
 
+  const isOnline = (c) => c.laatst_actief && (Date.now() - new Date(c.laatst_actief).getTime()) < 5 * 60 * 1000;
+  const aantalOnline = companies.filter(isOnline).length;
+
   const rows = companies.map(c => `
     <tr>
       <td><form method="post" action="/admin/bedrijven/${c.id}/bewerken" style="display:flex;gap:6px;"><input type="text" name="naam" value="${esc(c.naam)}" required style="width:150px;"><button type="submit">Wijzigen</button></form></td>
       <td><span class="code">${esc(c.code)}</span>${c.id === nieuwId ? ' <strong style="color:#012750;">(nieuw)</strong>' : ''}</td>
       <td>${c.actief ? 'Actief' : 'Ingetrokken'}</td>
       <td>${esc(String(c.aangemaakt_op).slice(0, 10))}</td>
+      <td>${isOnline(c) ? '<span style="color:#1a7d3c;font-weight:600;">&#9679; Online</span>' : (c.laatst_actief ? `<span style="color:var(--grijs);">${tijdGeleden(c.laatst_actief)}</span>` : '<span style="color:var(--grijs);">Nog niet ingelogd</span>')}</td>
       <td style="white-space:nowrap;">
         <form method="post" action="/admin/bedrijven/${c.id}/toggle" style="display:inline;">
           <button type="submit">${c.actief ? 'Intrekken' : 'Heractiveren'}</button>
@@ -1518,7 +1541,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
 
   const body = `
   <h1>Beheer &ndash; bedrijven &amp; toegangscodes</h1>
-  <p class="form-intro">Voeg hier bedrijven toe en geef ze de gegenereerde code door. Met die code kunnen ze inloggen op de portal.</p>
+  <p class="form-intro">Voeg hier bedrijven toe en geef ze de gegenereerde code door. Met die code kunnen ze inloggen op de portal. &middot; <strong style="color:#1a7d3c;">${aantalOnline} van ${companies.length} bedrijven nu online</strong> (actief in de laatste 5 minuten).</p>
 
   <form class="offer-form" method="post" action="/admin/bedrijven" style="margin-bottom:24px;max-width:480px;">
     <div class="form-row">
@@ -1532,10 +1555,10 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
 
   <table class="offers bedrijven">
     <thead>
-      <tr><th>Bedrijf</th><th>Code</th><th>Status</th><th>Toegevoegd</th><th></th></tr>
+      <tr><th>Bedrijf</th><th>Code</th><th>Status</th><th>Toegevoegd</th><th>Online</th><th></th></tr>
     </thead>
     <tbody>
-      ${rows || '<tr><td colspan="5" class="empty">Nog geen bedrijven toegevoegd.</td></tr>'}
+      ${rows || '<tr><td colspan="6" class="empty">Nog geen bedrijven toegevoegd.</td></tr>'}
     </tbody>
   </table>
 
