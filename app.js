@@ -234,6 +234,7 @@ function layout(req, title, body, opts = {}) {
       <a href="/overzicht">Overzicht</a>
       <a href="/nieuw/vracht">Vracht aanbieden</a>
       <a href="/nieuw/capaciteit">Capaciteit aanbieden</a>
+      <a href="/bedrijven">Bedrijven</a>
       ${bedrijf ? `<a href="/mijn-bedrijf">Mijn bedrijf</a> <a href="/uitloggen">Uitloggen (${esc(bedrijf.naam)})</a>` : `<a href="/login">Inloggen</a>`}
     </nav>
   </div>
@@ -739,6 +740,39 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
   `;
 
   res.send(layout(req, `Combi-Match - ${c.naam}`, body));
+}));
+
+app.get('/bedrijven', requireLogin, ah(async (req, res) => {
+  const { rows } = await pool.query('SELECT id, naam, logo_data, website, profiel_zichtbaar FROM companies WHERE actief = true ORDER BY naam ASC');
+  const metLogo = rows.filter(c => c.logo_data);
+  const zonderLogo = rows.filter(c => !c.logo_data);
+
+  const tegelHref = (c) => c.profiel_zichtbaar ? `/bedrijf/${c.id}` : (c.website ? (/^https?:\/\//i.test(c.website) ? c.website : `https://${c.website}`) : '');
+  const tegel = (c) => {
+    const href = tegelHref(c);
+    const extern = !c.profiel_zichtbaar && c.website;
+    const inner = `<div style="width:64px; height:64px; border-radius:6px; background:#f9fafb; border:1px solid var(--rand); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;"><img src="${esc(c.logo_data)}" alt="Logo ${esc(c.naam)}" style="max-width:100%; max-height:100%; object-fit:contain;"></div><span style="font-size:0.85rem; font-weight:600; color:var(--blauw); text-align:center;">${esc(c.naam)}</span>`;
+    const tegelStijl = 'text-decoration:none; background:#fff; border:1px solid var(--rand); border-radius:8px; padding:14px 10px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;';
+    return href
+      ? `<a href="${esc(href)}"${extern ? ' target="_blank" rel="noopener noreferrer"' : ''} style="${tegelStijl}">${inner}</a>`
+      : `<div style="${tegelStijl}">${inner}</div>`;
+  };
+  const naamLink = (c) => c.profiel_zichtbaar
+    ? `<a href="/bedrijf/${c.id}" style="color:var(--blauw); text-decoration:none;">${esc(c.naam)}</a>`
+    : `<span style="color:var(--blauw);">${esc(c.naam)}</span>`;
+
+  const body = `
+  <h1>Bedrijven</h1>
+  <p class="form-intro">Alle bedrijven die meedoen aan CombiMatch.</p>
+  ${metLogo.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:16px;${zonderLogo.length ? ' margin-bottom:28px;' : ''}">
+    ${metLogo.map(tegel).join('')}
+  </div>` : ''}
+  ${zonderLogo.length ? `<div style="display:flex; flex-wrap:wrap; gap:10px 22px; font-size:0.9rem;${metLogo.length ? ' border-top:1px solid var(--rand); padding-top:20px;' : ''}">
+    ${zonderLogo.map(naamLink).join('')}
+  </div>` : ''}
+  ${!rows.length ? '<p class="form-intro">Nog geen bedrijven om te tonen.</p>' : ''}
+  `;
+  res.send(layout(req, 'Combi-Match - Bedrijven', body));
 }));
 
 app.post('/mijn-bedrijf/ritregels', requireLogin, ah(async (req, res) => {
