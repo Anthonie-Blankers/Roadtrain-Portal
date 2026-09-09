@@ -530,10 +530,9 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       </div>
     </div>
     <div class="form-row" style="margin-top:12px;">
-      <label>Landen actief</label>
       <div style="position:relative; max-width:320px;">
         <button type="button" id="landen-dropdown-toggle" onclick="return toggleLandenDropdown()" style="width:100%; text-align:left; padding:8px 10px; border:1px solid var(--rand); border-radius:5px; font-size:0.9rem; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
-          <span>Landen selecteren</span><span>&#9662;</span>
+          <span>Landen actief</span><span>&#9662;</span>
         </button>
         <div id="landen-dropdown-panel" style="display:none; position:absolute; z-index:20; background:#fff; border:1px solid var(--rand); border-radius:5px; max-height:220px; overflow-y:auto; width:100%; margin-top:4px; box-shadow:0 4px 12px rgba(0,0,0,0.12);">
           ${LANDEN.map(([code, naam]) => `<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; cursor:pointer; font-size:0.9rem;"><input type="checkbox" name="actieve_landen" value="${code}" ${actieveLandenWaarden.includes(code) ? 'checked' : ''} onchange="updateLandenChips()"> ${esc(naam)}</label>`).join('')}
