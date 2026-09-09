@@ -531,7 +531,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
     </div>
     <div class="form-row" style="margin-top:12px;">
       <div style="position:relative; max-width:320px;">
-        <button type="button" id="landen-dropdown-toggle" onclick="return toggleLandenDropdown()" style="width:100%; text-align:left; padding:8px 10px; border:1px solid var(--rand); border-radius:5px; font-size:0.9rem; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+        <button type="button" id="landen-dropdown-toggle" onclick="return toggleLandenDropdown()" style="width:100%; text-align:left; padding:8px 10px; border:1px solid var(--rand); border-radius:5px; font-size:0.9rem; background:#fff; color:var(--blauw); cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
           <span>Landen actief</span><span>&#9662;</span>
         </button>
         <div id="landen-dropdown-panel" style="display:none; position:absolute; z-index:20; background:#fff; border:1px solid var(--rand); border-radius:5px; max-height:220px; overflow-y:auto; width:100%; margin-top:4px; box-shadow:0 4px 12px rgba(0,0,0,0.12);">
