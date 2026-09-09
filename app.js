@@ -93,6 +93,7 @@ async function migreer() {
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS profiel_zichtbaar BOOLEAN NOT NULL DEFAULT false`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS zichtbare_velden TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS laatst_actief TIMESTAMPTZ`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS actieve_landen TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ritregels (
       id TEXT PRIMARY KEY,
@@ -358,6 +359,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
   const opgeslagen = req.query.opgeslagen === '1';
   const materieelWaarden = (c.materieel || '').split(',').filter(Boolean);
   const uitrustingWaarden = (c.uitrusting || '').split(',').filter(Boolean);
+  const actieveLandenWaarden = (c.actieve_landen || '').split(',').filter(Boolean);
   const zichtbareVelden = (c.zichtbare_velden || '').split(',').filter(Boolean);
 
   const ritregelRijen = ritregels.map(r => `
@@ -527,6 +529,18 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
         <input type="text" name="uitrusting_anders" class="materieel-vrij" value="${esc(c.uitrusting_anders || '')}" placeholder="bijv. Schuifzeil">
       </div>
     </div>
+    <div class="form-row" style="margin-top:12px;">
+      <label>Landen actief</label>
+      <div style="position:relative; max-width:320px;">
+        <button type="button" id="landen-dropdown-toggle" onclick="return toggleLandenDropdown()" style="width:100%; text-align:left; padding:8px 10px; border:1px solid var(--rand); border-radius:5px; font-size:0.9rem; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+          <span>Landen selecteren</span><span>&#9662;</span>
+        </button>
+        <div id="landen-dropdown-panel" style="display:none; position:absolute; z-index:20; background:#fff; border:1px solid var(--rand); border-radius:5px; max-height:220px; overflow-y:auto; width:100%; margin-top:4px; box-shadow:0 4px 12px rgba(0,0,0,0.12);">
+          ${LANDEN.map(([code, naam]) => `<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; cursor:pointer; font-size:0.9rem;"><input type="checkbox" name="actieve_landen" value="${code}" ${actieveLandenWaarden.includes(code) ? 'checked' : ''} onchange="updateLandenChips()"> ${esc(naam)}</label>`).join('')}
+        </div>
+      </div>
+      <div id="landen-chips-rij" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
+    </div>
     <div style="margin-top:24px; padding-top:20px; padding-bottom:20px; border-top:1px solid var(--rand); border-bottom:1px solid var(--rand);">
       <div style="display:flex; align-items:center; justify-content:space-between;">
         <label style="font-weight:600; font-size:0.95rem; color:var(--blauw);">Zichtbaar voor andere bedrijven</label>
@@ -597,6 +611,31 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
       if (fileInput) fileInput.value = '';
       return false;
     }
+    function toggleLandenDropdown() {
+      var panel = document.getElementById('landen-dropdown-panel');
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      return false;
+    }
+    function updateLandenChips() {
+      var checked = Array.prototype.slice.call(document.querySelectorAll('input[name="actieve_landen"]:checked'));
+      var rij = document.getElementById('landen-chips-rij');
+      if (checked.length) {
+        rij.innerHTML = checked.map(function (cb) {
+          return '<span class="materieel-optie" style="background:var(--blauw-licht); color:var(--blauw); padding:4px 10px; border-radius:5px;">' + cb.parentElement.textContent.trim() + '</span>';
+        }).join('');
+      } else {
+        rij.innerHTML = '<span style="color:var(--grijs); font-size:0.85rem;">Nog geen landen geselecteerd</span>';
+      }
+    }
+    document.addEventListener('click', function (e) {
+      var toggle = document.getElementById('landen-dropdown-toggle');
+      var panel = document.getElementById('landen-dropdown-panel');
+      if (!panel || panel.style.display === 'none') return;
+      if (!panel.contains(e.target) && e.target !== toggle && !toggle.contains(e.target)) {
+        panel.style.display = 'none';
+      }
+    });
+    updateLandenChips();
   </script>
 
   <h2 style="margin-top:32px;">Jouw ritregels (${ritregels.length}/4)</h2>
@@ -614,6 +653,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
 app.post('/mijn-bedrijf/bewerken', requireLogin, ah(async (req, res) => {
   const materieel = Array.isArray(req.body.materieel) ? req.body.materieel : (req.body.materieel ? [req.body.materieel] : []);
   const uitrusting = Array.isArray(req.body.uitrusting) ? req.body.uitrusting : (req.body.uitrusting ? [req.body.uitrusting] : []);
+  const actieveLanden = Array.isArray(req.body.actieve_landen) ? req.body.actieve_landen : (req.body.actieve_landen ? [req.body.actieve_landen] : []);
   const zichtbareVelden = Array.isArray(req.body.zichtbare_velden) ? req.body.zichtbare_velden : (req.body.zichtbare_velden ? [req.body.zichtbare_velden] : []);
   const profielZichtbaar = req.body.profiel_zichtbaar === '1';
   const logoDataRuw = (req.body.logo_data || '').trim();
@@ -622,14 +662,14 @@ app.post('/mijn-bedrijf/bewerken', requireLogin, ah(async (req, res) => {
     `UPDATE companies SET adres=$1, postcode=$2, plaats=$3, land=$4, contactpersoon_naam=$5, contactpersoon_telefoon=$6,
       contactpersoon_email=$7, algemeen_telefoon=$8, algemeen_email=$9, website=$10, kvk=$11, omschrijving=$12,
       materieel=$13, materieel_anders=$14, bank=$15, iban=$16, bic=$17, btw_nummer=$18, uitrusting=$19, uitrusting_anders=$20,
-      aantal_combis=$21, oprichtingsjaar=$22, profiel_zichtbaar=$23, zichtbare_velden=$24, logo_data=$25 WHERE id=$26`,
+      aantal_combis=$21, oprichtingsjaar=$22, profiel_zichtbaar=$23, zichtbare_velden=$24, logo_data=$25, actieve_landen=$26 WHERE id=$27`,
     [req.body.adres || '', req.body.postcode || '', req.body.plaats || '', req.body.land || '',
      req.body.contactpersoon_naam || '', req.body.contactpersoon_telefoon || '', req.body.contactpersoon_email || '',
      req.body.algemeen_telefoon || '', req.body.algemeen_email || '', req.body.website || '', req.body.kvk || '',
      req.body.omschrijving || '', materieel.join(','), req.body.materieel_anders || '',
      req.body.bank || '', req.body.iban || '', req.body.bic || '', req.body.btw_nummer || '',
      uitrusting.join(','), req.body.uitrusting_anders || '',
-     req.body.aantal_combis || '', req.body.oprichtingsjaar || '', profielZichtbaar, zichtbareVelden.join(','), logoData, req.bedrijf.id]
+     req.body.aantal_combis || '', req.body.oprichtingsjaar || '', profielZichtbaar, zichtbareVelden.join(','), logoData, actieveLanden.join(','), req.bedrijf.id]
   );
   res.redirect('/mijn-bedrijf?opgeslagen=1');
 }));
@@ -666,6 +706,7 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
 
   const materieelChips = (heeft('materieel') && (c.materieel || c.materieel_anders)) ? (c.materieel || '').split(',').filter(Boolean).map(m => ({volumecombi:'(Volume)combi', lzv:'LZV', koelvries:'Koel/vries-combi', megatrailer:'Mega trailer', standaard:'Standaard trailer'}[m] || m)).concat(c.materieel_anders ? [c.materieel_anders] : []) : [];
   const uitrustingChips = (heeft('materieel') && (c.uitrusting || c.uitrusting_anders)) ? (c.uitrusting || '').split(',').filter(Boolean).map(u => ({laadklep:'Laadklep', pompwagen:'(Elektrische) pompwagen', dubbeldekvloer:'Dubbeldekvloer', dubbeldekbalken:'Dubbeldekbalken', oprijdplaten:'Oprijdplaten', kooiaap:'Kooiaap', houtrongen:'Houtrongen'}[u] || u)).concat(c.uitrusting_anders ? [c.uitrusting_anders] : []) : [];
+  const landenChips = (heeft('materieel') && c.actieve_landen) ? c.actieve_landen.split(',').filter(Boolean).map(code => landNaam(code)) : [];
   const chip = (t) => `<span class="materieel-optie" style="background:var(--blauw-licht); color:var(--blauw); padding:4px 10px; border-radius:5px;">${esc(t)}</span>`;
 
   const websiteHref = c.website ? (/^https?:\/\//i.test(c.website) ? c.website : `https://${c.website}`) : '';
@@ -688,9 +729,10 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
 
   ${heeft('omschrijving') && c.omschrijving ? `<p style="margin-top:14px;">${esc(c.omschrijving)}</p>` : ''}
 
-  ${materieelChips.length || uitrustingChips.length ? `<h2 style="margin-top:24px;">Materieel en specialisatie</h2>
-  ${materieelChips.length ? `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:${uitrustingChips.length ? '8px' : '0'};">${materieelChips.map(chip).join('')}</div>` : ''}
-  ${uitrustingChips.length ? `<div style="display:flex; gap:8px; flex-wrap:wrap;">${uitrustingChips.map(chip).join('')}</div>` : ''}` : ''}
+  ${materieelChips.length || uitrustingChips.length || landenChips.length ? `<h2 style="margin-top:24px;">Materieel en specialisatie</h2>
+  ${materieelChips.length ? `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:${uitrustingChips.length || landenChips.length ? '8px' : '0'};">${materieelChips.map(chip).join('')}</div>` : ''}
+  ${uitrustingChips.length ? `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:${landenChips.length ? '8px' : '0'};">${uitrustingChips.map(chip).join('')}</div>` : ''}
+  ${landenChips.length ? `<div style="display:flex; gap:8px; flex-wrap:wrap;">${landenChips.map(chip).join('')}</div>` : ''}` : ''}
 
   ${ritregelsHtml}
 
