@@ -80,7 +80,7 @@ body {
           z-index: 30;
           padding: 4px 0;
 }
-.nav-dropdown-panel a {
+.topbar .nav-dropdown-panel a {
           display: block;
           color: var(--blauw);
           opacity: 1;
@@ -88,7 +88,7 @@ body {
           padding: 8px 14px;
           font-size: 0.9rem;
 }
-.nav-dropdown-panel a:hover { background: var(--blauw-licht); text-decoration: none; }
+.topbar .nav-dropdown-panel a:hover { background: var(--blauw-licht); text-decoration: none; }
 
 main.wrap { padding-top: 30px; padding-bottom: 60px; min-height: 60vh; }
 
