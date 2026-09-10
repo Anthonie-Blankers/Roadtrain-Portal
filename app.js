@@ -581,7 +581,6 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
         ${zichtbaarheidCheckbox('oprichtingsjaar', 'Oprichtingsjaar')}
         ${zichtbaarheidCheckbox('kvk', 'KVK-nummer')}
         ${zichtbaarheidCheckbox('materieel', 'Materieel en specialisatie')}
-        ${zichtbaarheidCheckbox('ritregels', 'Structureel gezocht (ritregels)')}
       </div>
     </div>
 
@@ -702,8 +701,7 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
   if (!c) {
     return res.status(404).send(layout(req, 'Combi-Match - Profiel niet gevonden', '<h1>Bedrijfsprofiel niet gevonden</h1><p class="form-intro">Dit bedrijf bestaat niet (meer).</p>'));
   }
-  const alleZichtbareVelden = (c.zichtbare_velden || '').split(',').filter(Boolean);
-  const zichtbareVelden = c.profiel_zichtbaar ? alleZichtbareVelden : alleZichtbareVelden.filter(v => v === 'ritregels');
+  const zichtbareVelden = c.profiel_zichtbaar ? (c.zichtbare_velden || '').split(',').filter(Boolean) : [];
   const heeft = (veld) => zichtbareVelden.includes(veld);
 
   const contactregels = [];
@@ -711,19 +709,19 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
   if (heeft('email') && c.algemeen_email) contactregels.push(`<div><span style="color:var(--grijs);">E-mail &middot; </span><a href="mailto:${esc(c.algemeen_email)}">${esc(c.algemeen_email)}</a></div>`);
 
   let ritregelsHtml = '';
-  if (heeft('ritregels')) {
-    const { rows: ritregels } = await pool.query('SELECT * FROM ritregels WHERE bedrijf_id = $1 AND actief = true ORDER BY aangemaakt_op ASC', [c.id]);
+  const { rows: ritregels } = await pool.query('SELECT * FROM ritregels WHERE bedrijf_id = $1 AND actief = true ORDER BY aangemaakt_op ASC', [c.id]);
+  if (ritregels.length) {
     ritregelsHtml = `
     <h2 style="margin-top:24px;">Structureel gezocht</h2>
     <div class="ritregel-lijst">
-      ${ritregels.length ? ritregels.map(r => `
+      ${ritregels.map(r => `
         <div class="ritregel-rij">
           <div class="ritregel-rij-info">
             ${ritregelBadge(r.type)}
             <span class="ritregel-route">${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</span>
             ${r.opmerking ? `<span class="ritregel-opmerking">${esc(r.opmerking)}</span>` : ''}
           </div>
-        </div>`).join('') : '<p class="form-intro">Geen actieve ritregels.</p>'}
+        </div>`).join('')}
     </div>`;
   }
 
@@ -759,20 +757,25 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
 
   ${ritregelsHtml}
 
-  ${zichtbareVelden.length ? `<p class="form-intro" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--rand);">Dit zijn de gegevens die ${esc(c.naam)} zelf heeft vrijgegeven. Overige bedrijfsgegevens blijven priv&eacute;.</p>` : `<p class="form-intro" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--rand);">${esc(c.naam)} heeft nog geen extra bedrijfsgegevens zichtbaar gemaakt.</p>`}
+  ${(zichtbareVelden.length || ritregelsHtml) ? `<p class="form-intro" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--rand);">Dit zijn de gegevens die ${esc(c.naam)} zelf heeft vrijgegeven. Overige bedrijfsgegevens blijven priv&eacute;.</p>` : `<p class="form-intro" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--rand);">${esc(c.naam)} heeft nog geen extra bedrijfsgegevens zichtbaar gemaakt.</p>`}
   `;
 
   res.send(layout(req, `Combi-Match - ${c.naam}`, body));
 }));
 
 app.get('/bedrijven', requireLogin, ah(async (req, res) => {
-  const { rows } = await pool.query('SELECT id, naam, logo_data, website, profiel_zichtbaar, zichtbare_velden FROM companies WHERE actief = true ORDER BY naam ASC');
+  const { rows } = await pool.query(`
+    SELECT c.id, c.naam, c.logo_data, c.website, c.profiel_zichtbaar, c.zichtbare_velden,
+      (SELECT COUNT(*) FROM ritregels r WHERE r.bedrijf_id = c.id AND r.actief = true) AS ritregel_aantal
+    FROM companies c WHERE c.actief = true ORDER BY c.naam ASC
+  `);
   const metLogo = rows.filter(c => c.logo_data);
   const zonderLogo = rows.filter(c => !c.logo_data);
 
   const aantalZichtbareVelden = (c) => {
     const alle = (c.zichtbare_velden || '').split(',').filter(Boolean);
-    return c.profiel_zichtbaar ? alle.length : (alle.includes('ritregels') ? 1 : 0);
+    const basis = c.profiel_zichtbaar ? alle.length : 0;
+    return basis + (parseInt(c.ritregel_aantal, 10) > 0 ? 1 : 0);
   };
   const tegel = (c) => {
     const inner = `<div style="width:64px; height:64px; border-radius:6px; background:#f9fafb; border:1px solid var(--rand); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;"><img src="${esc(c.logo_data)}" alt="Logo ${esc(c.naam)}" style="max-width:100%; max-height:100%; object-fit:contain;"></div><span style="font-size:0.85rem; font-weight:600; color:var(--blauw); text-align:center;">${esc(c.naam)}</span>`;
