@@ -699,10 +699,11 @@ app.post('/mijn-bedrijf/bewerken', requireLogin, ah(async (req, res) => {
 app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM companies WHERE id = $1 AND actief = true', [req.params.id]);
   const c = rows[0];
-  if (!c || !c.profiel_zichtbaar) {
-    return res.status(404).send(layout(req, 'Combi-Match - Profiel niet gevonden', '<h1>Bedrijfsprofiel niet gevonden</h1><p class="form-intro">Dit profiel bestaat niet of is niet zichtbaar gemaakt.</p>'));
+  if (!c) {
+    return res.status(404).send(layout(req, 'Combi-Match - Profiel niet gevonden', '<h1>Bedrijfsprofiel niet gevonden</h1><p class="form-intro">Dit bedrijf bestaat niet (meer).</p>'));
   }
-  const zichtbareVelden = (c.zichtbare_velden || '').split(',').filter(Boolean);
+  const alleZichtbareVelden = (c.zichtbare_velden || '').split(',').filter(Boolean);
+  const zichtbareVelden = c.profiel_zichtbaar ? alleZichtbareVelden : alleZichtbareVelden.filter(v => v === 'ritregels');
   const heeft = (veld) => zichtbareVelden.includes(veld);
 
   const contactregels = [];
@@ -758,30 +759,30 @@ app.get('/bedrijf/:id', requireLogin, ah(async (req, res) => {
 
   ${ritregelsHtml}
 
-  <p class="form-intro" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--rand);">Dit zijn de gegevens die ${esc(c.naam)} zelf heeft vrijgegeven. Overige bedrijfsgegevens blijven priv&eacute;.</p>
+  ${zichtbareVelden.length ? `<p class="form-intro" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--rand);">Dit zijn de gegevens die ${esc(c.naam)} zelf heeft vrijgegeven. Overige bedrijfsgegevens blijven priv&eacute;.</p>` : `<p class="form-intro" style="margin-top:24px; padding-top:16px; border-top:1px solid var(--rand);">${esc(c.naam)} heeft nog geen extra bedrijfsgegevens zichtbaar gemaakt.</p>`}
   `;
 
   res.send(layout(req, `Combi-Match - ${c.naam}`, body));
 }));
 
 app.get('/bedrijven', requireLogin, ah(async (req, res) => {
-  const { rows } = await pool.query('SELECT id, naam, logo_data, website, profiel_zichtbaar FROM companies WHERE actief = true ORDER BY naam ASC');
+  const { rows } = await pool.query('SELECT id, naam, logo_data, website, profiel_zichtbaar, zichtbare_velden FROM companies WHERE actief = true ORDER BY naam ASC');
   const metLogo = rows.filter(c => c.logo_data);
   const zonderLogo = rows.filter(c => !c.logo_data);
 
-  const tegelHref = (c) => c.profiel_zichtbaar ? `/bedrijf/${c.id}` : (c.website ? (/^https?:\/\//i.test(c.website) ? c.website : `https://${c.website}`) : '');
+  const aantalZichtbareVelden = (c) => {
+    const alle = (c.zichtbare_velden || '').split(',').filter(Boolean);
+    return c.profiel_zichtbaar ? alle.length : (alle.includes('ritregels') ? 1 : 0);
+  };
   const tegel = (c) => {
-    const href = tegelHref(c);
-    const extern = !c.profiel_zichtbaar && c.website;
     const inner = `<div style="width:64px; height:64px; border-radius:6px; background:#f9fafb; border:1px solid var(--rand); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;"><img src="${esc(c.logo_data)}" alt="Logo ${esc(c.naam)}" style="max-width:100%; max-height:100%; object-fit:contain;"></div><span style="font-size:0.85rem; font-weight:600; color:var(--blauw); text-align:center;">${esc(c.naam)}</span>`;
     const tegelStijl = 'text-decoration:none; background:#fff; border:1px solid var(--rand); border-radius:8px; padding:14px 10px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;';
-    return href
-      ? `<a href="${esc(href)}"${extern ? ' target="_blank" rel="noopener noreferrer"' : ''} style="${tegelStijl}">${inner}</a>`
-      : `<div style="${tegelStijl}">${inner}</div>`;
+    return `<a href="/bedrijf/${c.id}" style="${tegelStijl}">${inner}</a>`;
   };
-  const naamLink = (c) => c.profiel_zichtbaar
-    ? `<a href="/bedrijf/${c.id}" style="color:var(--blauw); text-decoration:none;">${esc(c.naam)}</a>`
-    : `<span style="color:var(--blauw);">${esc(c.naam)}</span>`;
+  const naamLink = (c) => {
+    const dik = aantalZichtbareVelden(c) >= 3;
+    return `<a href="/bedrijf/${c.id}" style="color:var(--blauw); text-decoration:none;${dik ? ' font-weight:600;' : ''}">${esc(c.naam)}</a>`;
+  };
 
   const body = `
   <h1>Bedrijven</h1>
@@ -934,7 +935,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   }
 
   function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join(String.fromCharCode(13,10)); } function mailtoLink(o) { const onderwerp = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats} - Via CombiMatch`; return `mailto:${o.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(mailtoBody(o))}`; }
-  const { rows: zichtbareBedrijvenRows } = await pool.query('SELECT id FROM companies WHERE profiel_zichtbaar = true');
+  const { rows: zichtbareBedrijvenRows } = await pool.query('SELECT id FROM companies WHERE actief = true');
   const zichtbareBedrijfIds = new Set(zichtbareBedrijvenRows.map(r => r.id));
 
   const rows = filtered.map(o => `
@@ -1081,7 +1082,7 @@ app.get('/overzicht/structureel-gezocht', requireLogin, ah(async (req, res) => {
       <td>${ritregelBadge(r.type)}</td>
       <td>${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</td>
       <td>${r.opmerking ? esc(r.opmerking) : '-'}</td>
-      <td>${r.bedrijf_profiel_zichtbaar ? `<a href="/bedrijf/${r.bedrijf_id}">${esc(r.bedrijf_naam)}</a>` : esc(r.bedrijf_naam)}${r.bedrijf_algemeen_telefoon ? ` &middot; <a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a>` : ''}</td>
+      <td><a href="/bedrijf/${r.bedrijf_id}">${esc(r.bedrijf_naam)}</a>${r.bedrijf_algemeen_telefoon ? ` &middot; <a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a>` : ''}</td>
       <td>${actie}</td>
     </tr>`;
   }).join('');
