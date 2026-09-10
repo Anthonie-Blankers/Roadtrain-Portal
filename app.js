@@ -231,9 +231,20 @@ function layout(req, title, body, opts = {}) {
     <a href="/" class="logo"><img src="/logo-header-final.png" alt="CombiMatch &mdash; The Roadtrain Exchange" class="logo-img-wordmark"></a>
     <nav>
       <a href="/">Home</a>
-      <a href="/overzicht">Overzicht</a>
-      <a href="/nieuw/vracht">Vracht aanbieden</a>
-      <a href="/nieuw/capaciteit">Capaciteit aanbieden</a>
+      <div class="nav-dropdown">
+        <a href="#" onclick="var p=this.nextElementSibling; p.style.display = p.style.display==='block'?'none':'block'; return false;">Overzicht &#9662;</a>
+        <div class="nav-dropdown-panel">
+          <a href="/overzicht">Actuele aanbiedingen</a>
+          <a href="/overzicht/structureel-gezocht">Structureel gezocht</a>
+        </div>
+      </div>
+      <div class="nav-dropdown">
+        <a href="#" onclick="var p=this.nextElementSibling; p.style.display = p.style.display==='block'?'none':'block'; return false;">Aanbieden &#9662;</a>
+        <div class="nav-dropdown-panel">
+          <a href="/nieuw/vracht">Vracht aanbieden</a>
+          <a href="/nieuw/capaciteit">Capaciteit aanbieden</a>
+        </div>
+      </div>
       <a href="/bedrijven">Bedrijven</a>
       ${bedrijf ? `<a href="/mijn-bedrijf">Mijn bedrijf</a> <a href="/uitloggen">Uitloggen (${esc(bedrijf.naam)})</a>` : `<a href="/login">Inloggen</a>`}
     </nav>
@@ -246,6 +257,17 @@ ${body}
   <p style="font-weight:600;color:var(--blauw);margin-bottom:6px;">CombiMatch &ndash; The Roadtrain Exchange</p><p>Het samenwerkingsplatform voor vervoerders met (volume)combi's en LZV's.<br>Minder lege kilometers. Meer samenwerking. Betere benutting van capaciteit.</p><p style="margin-top:8px;font-size:0.72rem;">Ontwikkeld in 2026 door Anthonie Blankers vanuit de dagelijkse praktijk van Blankers Transport.</p>
   <p style="margin-top:8px;"><a href="/admin/login" style="color:var(--grijs);font-size:0.75rem;">Beheer</a></p>
 </footer>
+<script>
+document.addEventListener('click', function (e) {
+  var dropdowns = document.querySelectorAll('.nav-dropdown');
+  for (var i = 0; i < dropdowns.length; i++) {
+    if (!dropdowns[i].contains(e.target)) {
+      var panel = dropdowns[i].querySelector('.nav-dropdown-panel');
+      if (panel) panel.style.display = 'none';
+    }
+  }
+});
+</script>
 </body>
 </html>`;
 }
@@ -639,7 +661,7 @@ app.get('/mijn-bedrijf', requireLogin, ah(async (req, res) => {
   </script>
 
   <h2 style="margin-top:32px;">Jouw ritregels (${ritregels.length}/4)</h2>
-  <p class="form-intro">Ritregels die aan staan, zijn zichtbaar voor andere bedrijven bij &ldquo;Structureel gezocht&rdquo; op het overzicht.</p>
+  <p class="form-intro">Ritregels die aan staan, zijn zichtbaar voor andere bedrijven bij &ldquo;Structureel gezocht&rdquo; (onder Overzicht).</p>
   <div class="ritregel-lijst">
     ${ritregelRijen || '<p class="form-intro">Nog geen ritregels toegevoegd.</p>'}
   </div>
@@ -911,48 +933,9 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
     return `${esc(fmt(van_))}<br>&ndash; ${esc(fmt(tot_))}`;
   }
 
-  function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join(String.fromCharCode(13,10)); } function mailtoLink(o) { const onderwerp = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats} - Via CombiMatch`; return `mailto:${o.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(mailtoBody(o))}`; }  function ritregelMailtoBody(r) {
-    const doel = r.type === 'vracht' ? 'op zoek naar vracht' : 'op zoek naar combi-capaciteit';
-    const regels = ['Geachte heer/mevrouw,', '', `Ik zag dat jullie structureel ${doel} zijn van ${landNaam(r.regio_van)} naar ${landNaam(r.regio_naar)}.`, '', 'Is dit nog actueel?'];
-    if (r.opmerking) regels.push('', `Opmerking: ${r.opmerking}`);
-    return regels.join(String.fromCharCode(13, 10));
-  }
-  function ritregelMailtoLink(r, email) {
-    const onderwerp = `${landNaam(r.regio_van)} -> ${landNaam(r.regio_naar)} - Via CombiMatch`;
-    return `mailto:${email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(ritregelMailtoBody(r))}`;
-  }
+  function mailtoBody(o) { const regels = [`Geachte ${o.contactpersoon || ''},`, '', 'Is deze aanbieding nog actueel?', '', `Route: ${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats}`, `Laden: ${o.laaddatum_van}${o.laaddatum_tot && o.laaddatum_tot !== o.laaddatum_van ? ' t/m ' + o.laaddatum_tot : ''}`, `Lossen: ${o.losdatum_van}${o.losdatum_tot && o.losdatum_tot !== o.losdatum_van ? ' t/m ' + o.losdatum_tot : ''}`, `Laadmeter: ${o.laadmeter} lm`, `Hoogte: ${o.hoogte} m`]; if (o.gewicht) regels.push(`Gewicht: ${o.gewicht} t`); if (o.type_lading || o.opmerking) regels.push(`Lading/Opmerking: ${[o.type_lading, o.opmerking].filter(Boolean).join(' - ')}`); return regels.join(String.fromCharCode(13,10)); } function mailtoLink(o) { const onderwerp = `${o.van_land} ${o.van_postcode} ${o.van_plaats} -> ${o.naar_land} ${o.naar_postcode} ${o.naar_plaats} - Via CombiMatch`; return `mailto:${o.email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(mailtoBody(o))}`; }
   const { rows: zichtbareBedrijvenRows } = await pool.query('SELECT id FROM companies WHERE profiel_zichtbaar = true');
   const zichtbareBedrijfIds = new Set(zichtbareBedrijvenRows.map(r => r.id));
-
-  const { rows: ritregelsVast } = await pool.query(`
-    SELECT r.*, c.naam AS bedrijf_naam, c.algemeen_email AS bedrijf_algemeen_email, c.contactpersoon_email AS bedrijf_contactpersoon_email, c.algemeen_telefoon AS bedrijf_algemeen_telefoon, c.profiel_zichtbaar AS bedrijf_profiel_zichtbaar
-    FROM ritregels r
-    JOIN companies c ON c.id = r.bedrijf_id
-    WHERE r.actief = true AND c.actief = true
-    ORDER BY r.aangemaakt_op ASC, r.id ASC
-  `);
-  // eerlijke rotatie: elk uur schuift de onderste regel naar boven, zodat niet steeds dezelfde bedrijven bovenaan staan
-  const ritregels = (() => {
-    const n = ritregelsVast.length;
-    if (n === 0) return ritregelsVast;
-    const uurIndex = Math.floor(Date.now() / 3600000);
-    const offset = uurIndex % n;
-    return ritregelsVast.slice(n - offset).concat(ritregelsVast.slice(0, n - offset));
-  })();
-  const ritregelRows = ritregels.map(r => {
-    const email = r.bedrijf_algemeen_email || r.bedrijf_contactpersoon_email || '';
-    const actie = r.bedrijf_id === req.bedrijf.id
-      ? `<a href="/mijn-bedrijf/ritregels/${r.id}/bewerken" class="beheer-icon" title="Bewerken"><img src="/icon-dark.png" alt="Bewerken" class="beheer-icon-img"></a>`
-      : (email ? `<a href="${esc(ritregelMailtoLink(r, email))}" class="beheer-icon" title="Mail sturen naar ${esc(r.bedrijf_naam)}"><img src="/icon-white.png" alt="Mail sturen" class="beheer-icon-img"></a>` : `<img src="/icon-white.png" alt="" class="beheer-icon-img beheer-icon-inactive">`);
-    return `
-    <tr>
-      <td>${ritregelBadge(r.type)}</td>
-      <td>${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</td>
-      <td>${r.opmerking ? esc(r.opmerking) : '-'}</td>
-      <td>${r.bedrijf_profiel_zichtbaar ? `<a href="/bedrijf/${r.bedrijf_id}">${esc(r.bedrijf_naam)}</a>` : esc(r.bedrijf_naam)}${r.bedrijf_algemeen_telefoon ? ` &middot; <a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a>` : ''}</td>
-      <td>${actie}</td>
-    </tr>`;
-  }).join('');
 
   const rows = filtered.map(o => `
     <tr class="${o.status === 'vervuld' ? 'vervuld' : ''}">
@@ -1056,8 +1039,55 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
       ${rows || '<tr><td colspan="10" class="empty">Geen aanbiedingen gevonden binnen deze filters.</td></tr>'}
     </tbody>
   </table>
+  `;
 
-  <h2 style="margin-top:32px;">Structureel gezocht</h2>
+  res.send(layout(req, 'Combi-Match - Overzicht', body));
+}));
+
+app.get('/overzicht/structureel-gezocht', requireLogin, ah(async (req, res) => {
+  function ritregelMailtoBody(r) {
+    const doel = r.type === 'vracht' ? 'op zoek naar vracht' : 'op zoek naar combi-capaciteit';
+    const regels = ['Geachte heer/mevrouw,', '', `Ik zag dat jullie structureel ${doel} zijn van ${landNaam(r.regio_van)} naar ${landNaam(r.regio_naar)}.`, '', 'Is dit nog actueel?'];
+    if (r.opmerking) regels.push('', `Opmerking: ${r.opmerking}`);
+    return regels.join(String.fromCharCode(13, 10));
+  }
+  function ritregelMailtoLink(r, email) {
+    const onderwerp = `${landNaam(r.regio_van)} -> ${landNaam(r.regio_naar)} - Via CombiMatch`;
+    return `mailto:${email}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(ritregelMailtoBody(r))}`;
+  }
+
+  const { rows: ritregelsVast } = await pool.query(`
+    SELECT r.*, c.naam AS bedrijf_naam, c.algemeen_email AS bedrijf_algemeen_email, c.contactpersoon_email AS bedrijf_contactpersoon_email, c.algemeen_telefoon AS bedrijf_algemeen_telefoon, c.profiel_zichtbaar AS bedrijf_profiel_zichtbaar
+    FROM ritregels r
+    JOIN companies c ON c.id = r.bedrijf_id
+    WHERE r.actief = true AND c.actief = true
+    ORDER BY r.aangemaakt_op ASC, r.id ASC
+  `);
+  // eerlijke rotatie: elk uur schuift de onderste regel naar boven, zodat niet steeds dezelfde bedrijven bovenaan staan
+  const ritregels = (() => {
+    const n = ritregelsVast.length;
+    if (n === 0) return ritregelsVast;
+    const uurIndex = Math.floor(Date.now() / 3600000);
+    const offset = uurIndex % n;
+    return ritregelsVast.slice(n - offset).concat(ritregelsVast.slice(0, n - offset));
+  })();
+  const ritregelRows = ritregels.map(r => {
+    const email = r.bedrijf_algemeen_email || r.bedrijf_contactpersoon_email || '';
+    const actie = r.bedrijf_id === req.bedrijf.id
+      ? `<a href="/mijn-bedrijf/ritregels/${r.id}/bewerken" class="beheer-icon" title="Bewerken"><img src="/icon-dark.png" alt="Bewerken" class="beheer-icon-img"></a>`
+      : (email ? `<a href="${esc(ritregelMailtoLink(r, email))}" class="beheer-icon" title="Mail sturen naar ${esc(r.bedrijf_naam)}"><img src="/icon-white.png" alt="Mail sturen" class="beheer-icon-img"></a>` : `<img src="/icon-white.png" alt="" class="beheer-icon-img beheer-icon-inactive">`);
+    return `
+    <tr>
+      <td>${ritregelBadge(r.type)}</td>
+      <td>${landWeergave(r.regio_van)} &rarr; ${landWeergave(r.regio_naar)}</td>
+      <td>${r.opmerking ? esc(r.opmerking) : '-'}</td>
+      <td>${r.bedrijf_profiel_zichtbaar ? `<a href="/bedrijf/${r.bedrijf_id}">${esc(r.bedrijf_naam)}</a>` : esc(r.bedrijf_naam)}${r.bedrijf_algemeen_telefoon ? ` &middot; <a href="tel:${esc(r.bedrijf_algemeen_telefoon)}">${esc(r.bedrijf_algemeen_telefoon)}</a>` : ''}</td>
+      <td>${actie}</td>
+    </tr>`;
+  }).join('');
+
+  const body = `
+  <h1>Structureel gezocht</h1>
   <p class="form-intro">Bedrijven die regelmatig op zoek zijn naar vracht of capaciteit op deze route.</p>
   <table class="offers ritregels">
     <thead>
@@ -1069,7 +1099,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   </table>
   `;
 
-  res.send(layout(req, 'Combi-Match - Overzicht', body));
+  res.send(layout(req, 'Combi-Match - Structureel gezocht', body));
 }));
 
 // ---------- nieuwe aanbieding: gedeelde formulier-renderer ----------
