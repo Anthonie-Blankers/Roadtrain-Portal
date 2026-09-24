@@ -317,11 +317,12 @@ function extraAdresLinks(kant, actieveNr) {
   const label = kant === 'van' ? 'laadplaats' : 'losplaats';
   const plus2Zichtbaar = actieveNr >= 2 ? 'none' : 'inline-flex';
   const plus3Zichtbaar = actieveNr >= 3 ? 'none' : (actieveNr >= 2 ? 'inline-flex' : 'none');
-  return '<div id="' + kant + '-plus-2" style="display:' + plus2Zichtbaar + '; align-items:center; gap:6px; font-size:13px; margin-bottom:2px;">'
+  return '<div style="margin-top:-12px; margin-bottom:16px;">'
+    + '<div id="' + kant + '-plus-2" style="display:' + plus2Zichtbaar + '; align-items:center; gap:6px; font-size:13px;">'
     + '<a href="#" onclick="return adresToggle(\'' + kant + '\',2,true);" style="color:var(--blauw); font-weight:500;">+ nog een ' + label + ' toevoegen</a></div>'
-    + '<div id="' + kant + '-plus-3" style="display:' + plus3Zichtbaar + '; align-items:center; gap:6px; font-size:13px; margin-bottom:2px;">'
+    + '<div id="' + kant + '-plus-3" style="display:' + plus3Zichtbaar + '; align-items:center; gap:6px; font-size:13px;">'
     + '<a href="#" onclick="return adresToggle(\'' + kant + '\',3,true);" style="color:var(--blauw); font-weight:500;">+ nog een ' + label + ' toevoegen</a></div>'
-    ;
+    + '</div>';
 }
 
 function extraBadge(o, kant) {
@@ -1241,11 +1242,11 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
       </div>
       <div>
         <label>Naar &ndash; postcode</label>
-        <input type="text" name="naar_postcode" placeholder="bijv. 20100">
+        <input type="text" name="naar_postcode" placeholder="bijv. 2000">
       </div>
       <div>
         <label>Naar &ndash; plaats</label>
-        <input type="text" name="naar_plaats" required placeholder="bijv. Milaan">
+        <input type="text" name="naar_plaats" required placeholder="bijv. Antwerpen">
       </div>
     </div>
     ${!isCapaciteit ? extraAdresBlok('naar', 2, {}) + extraAdresBlok('naar', 3, {}) + extraAdresLinks('naar', 1) : ''}
