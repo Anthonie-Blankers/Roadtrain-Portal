@@ -321,7 +321,7 @@ function extraAdresLinks(kant, actieveNr) {
     + '<a href="#" onclick="return adresToggle(\'' + kant + '\',2,true);" style="color:var(--blauw); font-weight:500;">+ nog een ' + label + ' toevoegen</a></div>'
     + '<div id="' + kant + '-plus-3" style="display:' + plus3Zichtbaar + '; align-items:center; gap:6px; font-size:13px; margin-bottom:2px;">'
     + '<a href="#" onclick="return adresToggle(\'' + kant + '\',3,true);" style="color:var(--blauw); font-weight:500;">+ nog een ' + label + ' toevoegen</a></div>'
-    + '<div style="font-size:11px; color:var(--grijs); margin-bottom:14px;">max. 3 ' + label + 'en</div>';
+    ;
 }
 
 function extraBadge(o, kant) {
@@ -1237,7 +1237,7 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
     <div class="form-row two-col">
       <div>
         <label>Naar &ndash; land</label>
-        <select name="naar_land">${landOptions('IT', false)}</select>
+        <select name="naar_land">${landOptions('BE', false)}</select>
       </div>
       <div>
         <label>Naar &ndash; postcode</label>
