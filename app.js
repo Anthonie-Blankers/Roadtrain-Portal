@@ -66,7 +66,7 @@ async function migreer() {
       geplaatst_op TIMESTAMPTZ DEFAULT now()
     );
   `);
-  await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS bedrijf_id TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS laadtijd_van TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS laadtijd_tot TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS lostijd_van TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS lostijd_tot TEXT`); await pool.query(`CREATE TABLE IF NOT EXISTS archief (id TEXT PRIMARY KEY, type TEXT, van_land TEXT, van_postcode TEXT, van_plaats TEXT, naar_land TEXT, naar_postcode TEXT, naar_plaats TEXT, laaddatum_van TEXT, laaddatum_tot TEXT, losdatum_van TEXT, losdatum_tot TEXT, laadmeter TEXT, hoogte TEXT, gewicht TEXT, type_lading TEXT, opmerking TEXT, bedrijf TEXT, contactpersoon TEXT, telefoon TEXT, email TEXT, bedrijf_id TEXT, online_sinds TIMESTAMPTZ, offline_sinds TIMESTAMPTZ NOT NULL DEFAULT now())`);
+  await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS bedrijf_id TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS laadtijd_van TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS laadtijd_tot TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS lostijd_van TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS lostijd_tot TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS van_land_2 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS van_postcode_2 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS van_plaats_2 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS van_land_3 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS van_postcode_3 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS van_plaats_3 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS naar_land_2 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS naar_postcode_2 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS naar_plaats_2 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS naar_land_3 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS naar_postcode_3 TEXT`); await pool.query(`ALTER TABLE offers ADD COLUMN IF NOT EXISTS naar_plaats_3 TEXT`); await pool.query(`CREATE TABLE IF NOT EXISTS archief (id TEXT PRIMARY KEY, type TEXT, van_land TEXT, van_postcode TEXT, van_plaats TEXT, naar_land TEXT, naar_postcode TEXT, naar_plaats TEXT, laaddatum_van TEXT, laaddatum_tot TEXT, losdatum_van TEXT, losdatum_tot TEXT, laadmeter TEXT, hoogte TEXT, gewicht TEXT, type_lading TEXT, opmerking TEXT, bedrijf TEXT, contactpersoon TEXT, telefoon TEXT, email TEXT, bedrijf_id TEXT, online_sinds TIMESTAMPTZ, offline_sinds TIMESTAMPTZ NOT NULL DEFAULT now())`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS adres TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS postcode TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS plaats TEXT`);
@@ -267,6 +267,28 @@ document.addEventListener('click', function (e) {
     }
   }
 });
+function adresToggle(kant, nr, tonen) {
+  var blok = document.getElementById(kant + '-extra-' + nr);
+  if (!blok) return false;
+  blok.style.display = tonen ? 'flex' : 'none';
+  if (!tonen) {
+    var velden = blok.querySelectorAll('input, select');
+    for (var i = 0; i < velden.length; i++) {
+      if (velden[i].tagName === 'SELECT') velden[i].selectedIndex = 0;
+      else velden[i].value = '';
+    }
+  }
+  var plus2 = document.getElementById(kant + '-plus-2');
+  var plus3 = document.getElementById(kant + '-plus-3');
+  if (nr === 2) {
+    if (plus2) plus2.style.display = tonen ? 'none' : 'inline-flex';
+    if (plus3) plus3.style.display = tonen ? 'inline-flex' : 'none';
+    if (!tonen) adresToggle(kant, 3, false);
+  } else if (nr === 3) {
+    if (plus3) plus3.style.display = tonen ? 'none' : 'inline-flex';
+  }
+  return false;
+}
 </script>
 </body>
 </html>`;
@@ -277,6 +299,38 @@ function locatie(land, postcode, plaats) {
   const landWeergave = land ? (bekend ? '<span class="fi fi-' + land.toLowerCase() + '"></span> ' + esc(landNaam(land)) : esc(land)) : '';
   const rest = [esc(postcode), esc(plaats)].filter(Boolean).join(' ');
   return [landWeergave, rest].filter(Boolean).join(', ') || '-';
+}
+
+function extraAdresBlok(kant, nr, waarden) {
+  waarden = waarden || {};
+  const label = kant === 'van' ? 'laadplaats' : 'losplaats';
+  const zichtbaar = waarden.plaats ? 'flex' : 'none';
+  return '<div class="form-row two-col extra-adres-blok" id="' + kant + '-extra-' + nr + '" style="display:' + zichtbaar + ';">'
+    + '<div><label>' + nr + 'e ' + label + ' &ndash; land</label><select name="' + kant + '_land_' + nr + '">' + landOptions(waarden.land || '', false) + '</select></div>'
+    + '<div><label>' + nr + 'e ' + label + ' &ndash; postcode</label><input type="text" name="' + kant + '_postcode_' + nr + '" value="' + esc(waarden.postcode || '') + '"></div>'
+    + '<div><label>' + nr + 'e ' + label + ' &ndash; plaats</label><input type="text" name="' + kant + '_plaats_' + nr + '" value="' + esc(waarden.plaats || '') + '">'
+    + '<a href="#" onclick="return adresToggle(\'' + kant + '\',' + nr + ',false);" style="font-size:12px; color:var(--grijs); display:inline-block; margin-top:4px;">verwijderen</a></div>'
+    + '</div>';
+}
+
+function extraAdresLinks(kant, actieveNr) {
+  const label = kant === 'van' ? 'laadplaats' : 'losplaats';
+  const plus2Zichtbaar = actieveNr >= 2 ? 'none' : 'inline-flex';
+  const plus3Zichtbaar = actieveNr >= 3 ? 'none' : (actieveNr >= 2 ? 'inline-flex' : 'none');
+  return '<div id="' + kant + '-plus-2" style="display:' + plus2Zichtbaar + '; align-items:center; gap:6px; font-size:13px; margin-bottom:2px;">'
+    + '<a href="#" onclick="return adresToggle(\'' + kant + '\',2,true);" style="color:var(--blauw); font-weight:500;">+ nog een ' + label + ' toevoegen</a></div>'
+    + '<div id="' + kant + '-plus-3" style="display:' + plus3Zichtbaar + '; align-items:center; gap:6px; font-size:13px; margin-bottom:2px;">'
+    + '<a href="#" onclick="return adresToggle(\'' + kant + '\',3,true);" style="color:var(--blauw); font-weight:500;">+ nog een ' + label + ' toevoegen</a></div>'
+    + '<div style="font-size:11px; color:var(--grijs); margin-bottom:14px;">max. 3 ' + label + 'en</div>';
+}
+
+function extraBadge(o, kant) {
+  const nrs = [2, 3].filter(n => o[kant + '_plaats_' + n]);
+  if (!nrs.length) return '';
+  const id = 'ex-' + kant + '-' + o.id;
+  const detail = nrs.map(n => locatie(o[kant + '_land_' + n], o[kant + '_postcode_' + n], o[kant + '_plaats_' + n])).join('; ');
+  const woord = kant === 'van' ? 'laden' : 'lossen';
+  return ' <span onclick="var e=document.getElementById(\'' + id + '\'); e.style.display = e.style.display===\'inline\'?\'none\':\'inline\'; return false;" style="cursor:pointer; background:#fff; border:1px solid var(--rand); color:var(--blauw); font-size:10px; font-weight:600; padding:1px 6px; border-radius:10px;">+' + nrs.length + '</span><span id="' + id + '" style="display:none; font-size:11px; color:var(--grijs);"><br>ook ' + woord + ' in: ' + detail + '</span>';
 }
 
 // ---------- routes ----------
@@ -944,7 +998,7 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   const rows = filtered.map(o => `
     <tr class="${o.status === 'vervuld' ? 'vervuld' : ''}">
       <td><span class="badge badge-${o.type}">${o.type === 'vracht' ? 'Vracht' : 'Combi vrij'}</span></td>
-      <td><span class="route-part">${locatie(o.van_land, o.van_postcode, o.van_plaats)}</span> &rarr;<br><span class="route-part">${locatie(o.naar_land, o.naar_postcode, o.naar_plaats)}</span></td>
+      <td><span class="route-part">${locatie(o.van_land, o.van_postcode, o.van_plaats)}</span>${extraBadge(o, 'van')} &rarr;<br><span class="route-part">${locatie(o.naar_land, o.naar_postcode, o.naar_plaats)}</span>${extraBadge(o, 'naar')}</td>
       <td>${periode(o.laaddatum_van, o.laaddatum_tot)}${(o.laadtijd_van||o.laadtijd_tot) ? '<br><small>' + esc(o.laadtijd_van||'') + (o.laadtijd_tot ? ' &ndash; ' + esc(o.laadtijd_tot) : '') + '</small>' : ''}</td>
       <td>${periode(o.losdatum_van, o.losdatum_tot)}${(o.lostijd_van||o.lostijd_tot) ? '<br><small>' + esc(o.lostijd_van||'') + (o.lostijd_tot ? ' &ndash; ' + esc(o.lostijd_tot) : '') + '</small>' : ''}</td>
       <td>${esc(o.laadmeter)} lm</td>
@@ -1179,6 +1233,7 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
         <input type="text" name="van_plaats" required placeholder="bijv. Rotterdam">
       </div>
     </div>
+    ${!isCapaciteit ? extraAdresBlok('van', 2, {}) + extraAdresBlok('van', 3, {}) + extraAdresLinks('van', 1) : ''}
     <div class="form-row two-col">
       <div>
         <label>Naar &ndash; land</label>
@@ -1193,6 +1248,7 @@ function nieuwFormBody(modus, bedrijf, sjablonen) {
         <input type="text" name="naar_plaats" required placeholder="bijv. Milaan">
       </div>
     </div>
+    ${!isCapaciteit ? extraAdresBlok('naar', 2, {}) + extraAdresBlok('naar', 3, {}) + extraAdresLinks('naar', 1) : ''}
     <div class="form-row two-col">
       <div>
         <label>Laaddatum van</label>
@@ -1346,18 +1402,26 @@ app.post('/nieuw', requireLogin, ah(async (req, res) => {
     email: req.body.email || '',
     status: 'open',
     bedrijf_id: req.bedrijf.id, laadtijd_van: req.body.laadtijd_van || '', laadtijd_tot: req.body.laadtijd_tot || '', lostijd_van: req.body.lostijd_van || '', lostijd_tot: req.body.lostijd_tot || '',
+    van_land_2: req.body.van_land_2 || '', van_postcode_2: req.body.van_postcode_2 || '', van_plaats_2: req.body.van_plaats_2 || '',
+    van_land_3: req.body.van_land_3 || '', van_postcode_3: req.body.van_postcode_3 || '', van_plaats_3: req.body.van_plaats_3 || '',
+    naar_land_2: req.body.naar_land_2 || '', naar_postcode_2: req.body.naar_postcode_2 || '', naar_plaats_2: req.body.naar_plaats_2 || '',
+    naar_land_3: req.body.naar_land_3 || '', naar_postcode_3: req.body.naar_postcode_3 || '', naar_plaats_3: req.body.naar_plaats_3 || '',
   };
 
   await pool.query(
     `INSERT INTO offers (id, type, van_land, van_postcode, van_plaats, naar_land, naar_postcode, naar_plaats,
       laaddatum_van, laaddatum_tot, losdatum_van, losdatum_tot, laadmeter, hoogte, gewicht,
-      type_lading, opmerking, bedrijf, contactpersoon, telefoon, email, status, bedrijf_id, laadtijd_van, laadtijd_tot, lostijd_van, lostijd_tot)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)`,
+      type_lading, opmerking, bedrijf, contactpersoon, telefoon, email, status, bedrijf_id, laadtijd_van, laadtijd_tot, lostijd_van, lostijd_tot,
+      van_land_2, van_postcode_2, van_plaats_2, van_land_3, van_postcode_3, van_plaats_3,
+      naar_land_2, naar_postcode_2, naar_plaats_2, naar_land_3, naar_postcode_3, naar_plaats_3)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39)`,
     [offer.id, offer.type, offer.van_land, offer.van_postcode, offer.van_plaats,
      offer.naar_land, offer.naar_postcode, offer.naar_plaats,
      offer.laaddatum_van, offer.laaddatum_tot, offer.losdatum_van, offer.losdatum_tot,
      offer.laadmeter, offer.hoogte, offer.gewicht, offer.type_lading, offer.opmerking,
-     offer.bedrijf, offer.contactpersoon, offer.telefoon, offer.email, offer.status, offer.bedrijf_id, offer.laadtijd_van, offer.laadtijd_tot, offer.lostijd_van, offer.lostijd_tot]
+     offer.bedrijf, offer.contactpersoon, offer.telefoon, offer.email, offer.status, offer.bedrijf_id, offer.laadtijd_van, offer.laadtijd_tot, offer.lostijd_van, offer.lostijd_tot,
+     offer.van_land_2, offer.van_postcode_2, offer.van_plaats_2, offer.van_land_3, offer.van_postcode_3, offer.van_plaats_3,
+     offer.naar_land_2, offer.naar_postcode_2, offer.naar_plaats_2, offer.naar_land_3, offer.naar_postcode_3, offer.naar_plaats_3]
   );
 
   if (req.body.sjabloon_opslaan === '1') {
@@ -1414,6 +1478,7 @@ app.get('/aanbieding/:id', requireLogin, ah(async (req, res) => {
           <input type="text" name="van_plaats" required value="${esc(offer.van_plaats)}">
         </div>
       </div>
+      ${offer.type !== 'ruimte' ? extraAdresBlok('van', 2, { land: offer.van_land_2, postcode: offer.van_postcode_2, plaats: offer.van_plaats_2 }) + extraAdresBlok('van', 3, { land: offer.van_land_3, postcode: offer.van_postcode_3, plaats: offer.van_plaats_3 }) + extraAdresLinks('van', offer.van_plaats_3 ? 3 : (offer.van_plaats_2 ? 2 : 1)) : ''}
       <div class="form-row two-col">
         <div>
           <label>Naar &ndash; land</label>
@@ -1428,6 +1493,7 @@ app.get('/aanbieding/:id', requireLogin, ah(async (req, res) => {
           <input type="text" name="naar_plaats" required value="${esc(offer.naar_plaats)}">
         </div>
       </div>
+      ${offer.type !== 'ruimte' ? extraAdresBlok('naar', 2, { land: offer.naar_land_2, postcode: offer.naar_postcode_2, plaats: offer.naar_plaats_2 }) + extraAdresBlok('naar', 3, { land: offer.naar_land_3, postcode: offer.naar_postcode_3, plaats: offer.naar_plaats_3 }) + extraAdresLinks('naar', offer.naar_plaats_3 ? 3 : (offer.naar_plaats_2 ? 2 : 1)) : ''}
       <div class="form-row two-col">
         <div>
           <label>Laaddatum van</label>
@@ -1529,18 +1595,27 @@ app.post('/aanbieding/:id/bewerken', requireLogin, ah(async (req, res) => {
     contactpersoon: req.body.contactpersoon || '',
     telefoon: req.body.telefoon || '',
     email: req.body.email || '',
+    van_land_2: req.body.van_land_2 || '', van_postcode_2: req.body.van_postcode_2 || '', van_plaats_2: req.body.van_plaats_2 || '',
+    van_land_3: req.body.van_land_3 || '', van_postcode_3: req.body.van_postcode_3 || '', van_plaats_3: req.body.van_plaats_3 || '',
+    naar_land_2: req.body.naar_land_2 || '', naar_postcode_2: req.body.naar_postcode_2 || '', naar_plaats_2: req.body.naar_plaats_2 || '',
+    naar_land_3: req.body.naar_land_3 || '', naar_postcode_3: req.body.naar_postcode_3 || '', naar_plaats_3: req.body.naar_plaats_3 || '',
   };
 
   await pool.query(
     `UPDATE offers SET type=$1, status = CASE WHEN status = 'vervuld' AND COALESCE(NULLIF($11,''), $10)::date >= CURRENT_DATE THEN 'open' ELSE status END, van_land=$2, van_postcode=$3, van_plaats=$4, naar_land=$5, naar_postcode=$6,
       naar_plaats=$7, laaddatum_van=$8, laaddatum_tot=$9, losdatum_van=$10, losdatum_tot=$11, laadmeter=$12,
       hoogte=$13, gewicht=$14, type_lading=$15, opmerking=$16, bedrijf=$17, contactpersoon=$18, telefoon=$19,
-      email=$20, laadtijd_van=$22, laadtijd_tot=$23, lostijd_van=$24, lostijd_tot=$25 WHERE id=$21`,
+      email=$20, laadtijd_van=$22, laadtijd_tot=$23, lostijd_van=$24, lostijd_tot=$25,
+      van_land_2=$26, van_postcode_2=$27, van_plaats_2=$28, van_land_3=$29, van_postcode_3=$30, van_plaats_3=$31,
+      naar_land_2=$32, naar_postcode_2=$33, naar_plaats_2=$34, naar_land_3=$35, naar_postcode_3=$36, naar_plaats_3=$37
+      WHERE id=$21`,
     [bijgewerkt.type, bijgewerkt.van_land, bijgewerkt.van_postcode, bijgewerkt.van_plaats,
      bijgewerkt.naar_land, bijgewerkt.naar_postcode, bijgewerkt.naar_plaats,
      bijgewerkt.laaddatum_van, bijgewerkt.laaddatum_tot, bijgewerkt.losdatum_van, bijgewerkt.losdatum_tot,
      bijgewerkt.laadmeter, bijgewerkt.hoogte, bijgewerkt.gewicht, bijgewerkt.type_lading, bijgewerkt.opmerking,
-     bijgewerkt.bedrijf, bijgewerkt.contactpersoon, bijgewerkt.telefoon, bijgewerkt.email, offer.id, req.body.laadtijd_van || '', req.body.laadtijd_tot || '', req.body.lostijd_van || '', req.body.lostijd_tot || '']
+     bijgewerkt.bedrijf, bijgewerkt.contactpersoon, bijgewerkt.telefoon, bijgewerkt.email, offer.id, req.body.laadtijd_van || '', req.body.laadtijd_tot || '', req.body.lostijd_van || '', req.body.lostijd_tot || '',
+     bijgewerkt.van_land_2, bijgewerkt.van_postcode_2, bijgewerkt.van_plaats_2, bijgewerkt.van_land_3, bijgewerkt.van_postcode_3, bijgewerkt.van_plaats_3,
+     bijgewerkt.naar_land_2, bijgewerkt.naar_postcode_2, bijgewerkt.naar_plaats_2, bijgewerkt.naar_land_3, bijgewerkt.naar_postcode_3, bijgewerkt.naar_plaats_3]
   );
 
   res.redirect('/overzicht');
