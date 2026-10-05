@@ -1285,7 +1285,7 @@ app.get('/zoeken', requireLogin, ah(async (req, res) => {
   }).join('');
 
   let uitkomst = '';
-  if (!q) uitkomst = '<p class="form-intro">Typ een plaats, postcode, land of materiaal, bijvoorbeeld <em>Itali&euml; koel</em>, <em>91</em> of <em>Antwerpen</em>.</p>';
+  if (!q) uitkomst = '';
   else if (!termen.length) uitkomst = '<p class="form-intro">Geen bruikbare zoekterm gevonden. Gebruik een plaats, postcode, land of materiaal.</p>';
   else if (!kaarten.length) uitkomst = '<p class="form-intro">Niets gevonden voor deze combinatie. Probeer minder woorden, of alleen een land of postcode.</p>';
   else uitkomst = `<p style="font-size:12px; color:var(--grijs); margin-bottom:8px;">${kaarten.length} ${kaarten.length === 1 ? 'resultaat' : 'resultaten'}</p>${kaartHtml}`;
