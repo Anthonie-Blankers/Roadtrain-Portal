@@ -1294,7 +1294,7 @@ app.get('/zoeken', requireLogin, ah(async (req, res) => {
   <h1>Zoeken</h1>
   <p class="form-intro">We zoeken in bedrijfsprofielen, Structureel gezocht, actuele aanbiedingen en historie. Wat bedrijven zelf op hun profiel hebben verborgen, tonen we niet.</p>
   <form method="get" action="/zoeken" style="display:flex; gap:8px; max-width:560px;">
-    <input type="text" name="q" value="${esc(q)}" placeholder="bijv. Itali&euml; koel" autofocus style="flex:1;">
+    <input type="text" name="q" value="${esc(q)}" placeholder="plaats, postcode, land of materiaal" autofocus style="flex:1;">
     <button type="submit">Zoeken</button>
   </form>
   ${herkend}
