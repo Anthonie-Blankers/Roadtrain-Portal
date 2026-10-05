@@ -1298,7 +1298,7 @@ app.get('/zoeken', requireLogin, ah(async (req, res) => {
     <button type="submit">Zoeken</button>
   </form>
   ${herkend}
-  ${uitkomst}`;
+  <div style="padding-top:16px;">${uitkomst}</div>`;
   res.send(layout(req, 'Combi-Match - Zoeken', body));
 }));
 
