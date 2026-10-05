@@ -246,6 +246,7 @@ function layout(req, title, body, opts = {}) {
         </div>
       </div>
       <a href="/bedrijven">Bedrijven</a>
+      <a href="/zoeken">Zoeken</a>
       ${bedrijf ? `<a href="/mijn-bedrijf">Mijn bedrijf</a> <a href="/uitloggen">Uitloggen (${esc(bedrijf.naam)})</a>` : `<a href="/login">Inloggen</a>`}
     </nav>
   </div>
@@ -1101,6 +1102,204 @@ app.get('/overzicht', requireLogin, ah(async (req, res) => {
   `;
 
   res.send(layout(req, 'Combi-Match - Overzicht', body));
+}));
+
+// ---------- zoeken (zonder AI) ----------
+const ZOEK_STOPWOORDEN = new Set(['naar', 'van', 'in', 'richting', 'bij', 'de', 'het', 'een', 'voor', 'en', 'met', 'of', 'ik', 'zoek', 'wie', 'rond', 'te', 'op', 'uit']);
+const ZOEK_LAND_ALIAS = { holland: 'NL', germany: 'DE', italy: 'IT', france: 'FR', belgium: 'BE', spain: 'ES', poland: 'PL', engeland: 'GB', uk: 'GB' };
+const ZOEK_MATERIAAL = [
+  { woorden: ['koel', 'koelcombi', 'koelvries', 'vries', 'gekoeld', 'koeling'], soort: 'materieel', keys: ['koelvries'], label: 'Koel/vries-combi' },
+  { woorden: ['lzv', 'ecocombi'], soort: 'materieel', keys: ['lzv'], label: 'LZV' },
+  { woorden: ['volumecombi', 'volume'], soort: 'materieel', keys: ['volumecombi'], label: '(Volume)combi' },
+  { woorden: ['mega', 'megatrailer'], soort: 'materieel', keys: ['megatrailer'], label: 'Mega trailer' },
+  { woorden: ['standaard'], soort: 'materieel', keys: ['standaard'], label: 'Standaard trailer' },
+  { woorden: ['laadklep', 'klep'], soort: 'uitrusting', keys: ['laadklep'], label: 'Laadklep' },
+  { woorden: ['pomp', 'pompwagen'], soort: 'uitrusting', keys: ['pompwagen'], label: 'Pompwagen' },
+  { woorden: ['dubbeldek', 'dubbeldekker'], soort: 'uitrusting', keys: ['dubbeldekvloer', 'dubbeldekbalken'], label: 'Dubbeldek' },
+  { woorden: ['oprijplaten', 'oprijdplaten'], soort: 'uitrusting', keys: ['oprijdplaten'], label: 'Oprijdplaten' },
+  { woorden: ['kooiaap'], soort: 'uitrusting', keys: ['kooiaap'], label: 'Kooiaap' },
+  { woorden: ['rongen', 'houtrongen'], soort: 'uitrusting', keys: ['houtrongen'], label: 'Houtrongen' }
+];
+const ZOEK_MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+
+function zoekNorm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+
+function zoekParse(q) {
+  const landPerNaam = {};
+  LANDEN.forEach(l => { landPerNaam[zoekNorm(l[1])] = l[0]; });
+  const termen = [];
+  const gezien = new Set();
+  String(q || '').split(/[\s,;]+/).filter(Boolean).slice(0, 8).forEach(rauw => {
+    const n = zoekNorm(rauw);
+    if (!n || ZOEK_STOPWOORDEN.has(n)) return;
+    let term = null;
+    const code = /^[A-Z]{2}$/.test(rauw) && LANDEN.some(l => l[0] === rauw) ? rauw : (landPerNaam[n] || ZOEK_LAND_ALIAS[n] || null);
+    const mat = ZOEK_MATERIAAL.find(m => m.woorden.includes(n));
+    if (code) term = { soort: 'land', code: code, label: 'Land: ' + landNaam(code) };
+    else if (/^\d{2,5}\*?$/.test(n)) { const w = n.replace('*', ''); term = { soort: 'postcode', waarde: w, label: 'Postcode: ' + w + '*' }; }
+    else if (mat) term = { soort: 'materiaal', mat: mat, label: 'Materiaal: ' + mat.label };
+    else if (n.length >= 3) term = { soort: 'woord', waarde: n, label: 'Zoekwoord: ' + rauw };
+    if (!term) return;
+    const sleutel = term.soort + ':' + (term.code || term.waarde || term.mat.label);
+    if (gezien.has(sleutel)) return;
+    gezien.add(sleutel);
+    termen.push(term);
+  });
+  return termen;
+}
+
+function zoekAdressen(o) {
+  const lijst = [];
+  ['van', 'naar'].forEach(kant => {
+    ['', '_2', '_3'].forEach(nr => {
+      const land = o[kant + '_land' + nr], pc = o[kant + '_postcode' + nr], pl = o[kant + '_plaats' + nr];
+      if (land || pc || pl) lijst.push({ land: land, pc: pc, pl: pl });
+    });
+  });
+  return lijst;
+}
+
+function zoekAdresMatch(term, a) {
+  if (term.soort === 'land') return a.land === term.code;
+  if (term.soort === 'postcode') return zoekNorm(a.pc).replace(/\s/g, '').startsWith(term.waarde);
+  if (term.soort === 'woord') return zoekNorm(a.pl).includes(term.waarde);
+  return false;
+}
+
+function zoekDatum(d) { const p = String(d || '').split('-'); return p.length === 3 ? p[2] + '-' + p[1] + '-' + p[0] : ''; }
+
+function zoekRoute(o) {
+  const deel = (pl, land) => (pl ? esc(pl) : '') + (land ? ' (' + esc(land) + ')' : '');
+  return deel(o.van_plaats, o.van_land) + ' &rarr; ' + deel(o.naar_plaats, o.naar_land);
+}
+
+app.get('/zoeken', requireLogin, ah(async (req, res) => {
+  const q = String(req.query.q || '').trim().slice(0, 120);
+  const termen = zoekParse(q);
+  let kaarten = [];
+
+  if (termen.length) {
+    const [cRes, rRes, oRes, aRes] = await Promise.all([
+      pool.query('SELECT * FROM companies WHERE actief = true'),
+      pool.query('SELECT * FROM ritregels WHERE actief = true'),
+      pool.query("SELECT * FROM offers WHERE status <> 'vervuld' AND bedrijf_id IS NOT NULL"),
+      pool.query('SELECT bedrijf_id, van_land, van_postcode, van_plaats, naar_land, naar_postcode, naar_plaats, laaddatum_van FROM archief WHERE bedrijf_id IS NOT NULL')
+    ]);
+    const perBedrijf = new Map();
+    cRes.rows.forEach(c => perBedrijf.set(c.id, { c: c, gevonden: new Set(), redenen: new Map(), score: 0 }));
+    const raak = (id, ti, sleutel, html, gewicht) => {
+      const b = perBedrijf.get(id);
+      if (!b) return;
+      b.gevonden.add(ti);
+      if (sleutel && !b.redenen.has(sleutel)) { b.redenen.set(sleutel, html); b.score += gewicht; }
+    };
+
+    cRes.rows.forEach(c => {
+      const z = c.profiel_zichtbaar ? (c.zichtbare_velden || '').split(',').filter(Boolean) : [];
+      const landen = (c.actieve_landen || '').split(',').filter(Boolean);
+      const mats = (c.materieel || '').split(',').filter(Boolean);
+      const uits = (c.uitrusting || '').split(',').filter(Boolean);
+      termen.forEach((t, ti) => {
+        if (t.soort === 'land') {
+          if (z.includes('locatie') && c.land === t.code) raak(c.id, ti, 'p-land', 'Gevestigd in ' + esc(landNaam(t.code)), 2);
+          if (z.includes('materieel') && landen.includes(t.code)) raak(c.id, ti, 'p-actief', 'Actief in ' + esc(landNaam(t.code)), 2);
+        } else if (t.soort === 'postcode') {
+          if (z.includes('locatie') && zoekNorm(c.postcode).replace(/\s/g, '').startsWith(t.waarde)) raak(c.id, ti, 'p-pc', 'Gevestigd in postcodegebied ' + esc(t.waarde), 2);
+        } else if (t.soort === 'materiaal') {
+          const lijst = t.mat.soort === 'materieel' ? mats : uits;
+          if (z.includes('materieel') && t.mat.keys.some(k => lijst.includes(k))) raak(c.id, ti, 'p-mat-' + t.mat.label, 'Materiaal: ' + esc(t.mat.label), 2);
+        } else if (t.soort === 'woord') {
+          if (zoekNorm(c.naam).includes(t.waarde)) raak(c.id, ti, 'p-naam', 'Bedrijfsnaam', 3);
+          if (z.includes('locatie') && zoekNorm(c.plaats).includes(t.waarde)) raak(c.id, ti, 'p-plaats', 'Gevestigd in ' + esc(c.plaats), 2);
+          if (z.includes('omschrijving') && zoekNorm(c.omschrijving).includes(t.waarde)) raak(c.id, ti, 'p-omschr', 'Noemt &ldquo;' + esc(t.waarde) + '&rdquo; in omschrijving', 1);
+          if (z.includes('materieel') && zoekNorm((c.materieel_anders || '') + ' ' + (c.uitrusting_anders || '')).includes(t.waarde)) raak(c.id, ti, 'p-anders', 'Materiaal: ' + esc(t.waarde), 2);
+        }
+      });
+    });
+
+    rRes.rows.forEach(r => {
+      const wat = r.type === 'vracht' ? 'Zoekt vracht' : 'Zoekt combi';
+      const html = 'Structureel gezocht (' + wat.toLowerCase() + '): ' + esc(landNaam(r.regio_van)) + ' &rarr; ' + esc(landNaam(r.regio_naar));
+      termen.forEach((t, ti) => {
+        if (t.soort === 'land' && (r.regio_van === t.code || r.regio_naar === t.code)) raak(r.bedrijf_id, ti, 'r' + r.id, html, 3);
+        if (t.soort === 'woord' && zoekNorm(r.opmerking).includes(t.waarde)) raak(r.bedrijf_id, ti, 'r' + r.id, html, 3);
+      });
+    });
+
+    oRes.rows.forEach(o => {
+      const adressen = zoekAdressen(o);
+      const wat = o.type === 'vracht' ? 'Vracht' : 'Combi vrij';
+      const datum = zoekDatum(o.laaddatum_van);
+      const html = wat + ': ' + zoekRoute(o) + (datum ? ' &middot; ' + esc(datum) : '');
+      termen.forEach((t, ti) => {
+        let hit = adressen.some(a => zoekAdresMatch(t, a));
+        if (!hit && t.soort === 'woord') hit = zoekNorm((o.type_lading || '') + ' ' + (o.opmerking || '')).includes(t.waarde);
+        if (hit) raak(o.bedrijf_id, ti, 'o' + o.id, html, 3);
+      });
+    });
+
+    const hist = new Map();
+    aRes.rows.forEach(a => {
+      const adressen = zoekAdressen(a);
+      const set = new Set();
+      termen.forEach((t, ti) => { if (adressen.some(ad => zoekAdresMatch(t, ad))) set.add(ti); });
+      if (!set.size) return;
+      if (!hist.has(a.bedrijf_id)) hist.set(a.bedrijf_id, []);
+      hist.get(a.bedrijf_id).push({ set: set, datum: a.laaddatum_van || '' });
+    });
+    hist.forEach((rijen, id) => {
+      const max = Math.max.apply(null, rijen.map(r => r.set.size));
+      const sterk = rijen.filter(r => r.set.size === max);
+      const laatst = sterk.map(r => r.datum).sort().pop();
+      const p = String(laatst || '').split('-');
+      const wanneer = p.length === 3 && ZOEK_MAANDEN[parseInt(p[1], 10) - 1] ? ', laatst ' + ZOEK_MAANDEN[parseInt(p[1], 10) - 1] + ' ' + p[0] : '';
+      const unie = new Set();
+      sterk.forEach(r => r.set.forEach(i => unie.add(i)));
+      const html = 'Historie: ' + sterk.length + (sterk.length === 1 ? ' rit' : ' ritten') + wanneer;
+      let eerste = true;
+      unie.forEach(ti => { raak(id, ti, eerste ? 'hist' : null, html, 1 + Math.min(sterk.length, 5) * 0.5); eerste = false; });
+    });
+
+    kaarten = Array.from(perBedrijf.values()).filter(b => b.gevonden.size > 0);
+    kaarten.sort((a, b) => (b.gevonden.size - a.gevonden.size) || (b.score - a.score) || String(a.c.naam).localeCompare(String(b.c.naam)));
+    kaarten = kaarten.slice(0, 30);
+  }
+
+  const chip = (tekst, stijl) => '<span style="font-size:11px; padding:3px 10px; border-radius:10px; background:var(--blauw-licht); color:var(--blauw);' + (stijl || '') + '">' + tekst + '</span>';
+  const herkend = termen.length ? `<div style="display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 16px; align-items:center;">${termen.map(t => chip(esc(t.label))).join('')}<span style="font-size:11px; color:var(--grijs);">herkend in je zoekopdracht</span></div>` : '';
+
+  const kaartHtml = kaarten.map(b => {
+    const alles = termen.length >= 2 && b.gevonden.size === termen.length;
+    const badge = alles
+      ? '<span style="font-size:11px; background:var(--geel); color:var(--blauw); padding:2px 9px; border-radius:10px; font-weight:600;">Past goed</span>'
+      : (termen.length >= 2 ? chip(b.gevonden.size + ' van ' + termen.length + ' termen') : '');
+    const redenen = Array.from(b.redenen.values()).slice(0, 6);
+    return `
+    <div style="border:1px solid var(--rand); border-radius:12px; padding:12px 14px; margin-bottom:10px; background:#fff;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <a href="/bedrijf/${esc(b.c.id)}" style="font-weight:600; color:var(--blauw); text-decoration:none;">${esc(b.c.naam)}${req.bedrijf && req.bedrijf.id === b.c.id ? ' <span style="font-weight:400; color:var(--grijs);">(jouw bedrijf)</span>' : ''}</a>
+        ${badge}
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">${redenen.map(r => chip(r)).join('')}</div>
+    </div>`;
+  }).join('');
+
+  let uitkomst = '';
+  if (!q) uitkomst = '<p class="form-intro">Typ een plaats, postcode, land of materiaal, bijvoorbeeld <em>Itali&euml; koel</em>, <em>91</em> of <em>Antwerpen</em>.</p>';
+  else if (!termen.length) uitkomst = '<p class="form-intro">Geen bruikbare zoekterm gevonden. Gebruik een plaats, postcode, land of materiaal.</p>';
+  else if (!kaarten.length) uitkomst = '<p class="form-intro">Niets gevonden voor deze combinatie. Probeer minder woorden, of alleen een land of postcode.</p>';
+  else uitkomst = `<p style="font-size:12px; color:var(--grijs); margin-bottom:8px;">${kaarten.length} ${kaarten.length === 1 ? 'resultaat' : 'resultaten'}</p>${kaartHtml}`;
+
+  const body = `
+  <h1>Zoeken</h1>
+  <p class="form-intro">We zoeken in bedrijfsprofielen, Structureel gezocht, actuele aanbiedingen en historie. Wat bedrijven zelf op hun profiel hebben verborgen, tonen we niet.</p>
+  <form method="get" action="/zoeken" style="display:flex; gap:8px; max-width:560px;">
+    <input type="text" name="q" value="${esc(q)}" placeholder="bijv. Itali&euml; koel" autofocus style="flex:1;">
+    <button type="submit">Zoeken</button>
+  </form>
+  ${herkend}
+  ${uitkomst}`;
+  res.send(layout(req, 'Combi-Match - Zoeken', body));
 }));
 
 app.get('/overzicht/structureel-gezocht', requireLogin, ah(async (req, res) => {
