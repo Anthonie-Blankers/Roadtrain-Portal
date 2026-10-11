@@ -362,3 +362,9 @@ table.offers.ritregels th:nth-child(5), table.offers.ritregels td:nth-child(5) {
   .form-row input, .form-row select, .form-row textarea { min-width: 0; max-width: 100%; }
   .filters input[type="date"] { width: 100%; }
 }
+
+@media (max-width: 1320px) {
+  .filters > .filter-pair { grid-column: span 2 !important; }
+  .filters > .filter-pair .filter-group { min-width: 0; flex: 1; }
+  .filters > .filter-pair input[type="date"] { width: 100%; min-width: 0; }
+}
