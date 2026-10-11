@@ -368,3 +368,13 @@ table.offers.ritregels th:nth-child(5), table.offers.ritregels td:nth-child(5) {
   .filters > .filter-pair .filter-group { min-width: 0; flex: 1; }
   .filters > .filter-pair input[type="date"] { width: 100%; min-width: 0; }
 }
+
+@media (max-width: 1320px) {
+  .filters > .filter-pair { grid-column: auto !important; }
+  .filters > .filter-group:nth-child(6), .filters > .filter-group:nth-child(7) { grid-column: span 2 !important; }
+}
+
+@media (max-width: 640px) {
+  .filters > .filter-group:nth-child(6), .filters > .filter-group:nth-child(7) { grid-column: auto !important; }
+  .filters .range-pair input[type="date"] { flex: 1; width: auto; min-width: 0; }
+}
