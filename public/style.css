@@ -382,3 +382,9 @@ table.offers.ritregels th:nth-child(5), table.offers.ritregels td:nth-child(5) {
 @media (min-width: 641px) and (max-width: 1320px) {
   .filters > .filter-pair { grid-column: span 2 !important; }
 }
+
+@media (max-width: 800px) {
+  .topbar .wrap { height: auto; min-height: 60px; flex-wrap: wrap; gap: 6px 16px; padding-top: 8px; padding-bottom: 8px; }
+  .topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+  .topbar nav a { margin-left: 0; }
+}
