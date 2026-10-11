@@ -350,3 +350,15 @@ table.offers.ritregels th:nth-child(5), table.offers.ritregels td:nth-child(5) {
           .hero-actions { flex-direction: column; align-items: stretch; }
           .btn-hero { max-width: none; }@media (max-width: 700px) { table.offers { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; } table.offers th, table.offers td { white-space: nowrap; } }
 }
+
+
+@media (max-width: 1320px) {
+  .filters { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .filters > .filter-group, .filters > .filter-pair { grid-row: auto !important; grid-column: auto !important; justify-self: stretch !important; }
+}
+
+@media (max-width: 640px) {
+  .form-row > div[style*="flex-direction:row"] { flex-direction: column !important; }
+  .form-row input, .form-row select, .form-row textarea { min-width: 0; max-width: 100%; }
+  .filters input[type="date"] { width: 100%; }
+}
