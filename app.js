@@ -244,6 +244,7 @@ function layout(req, title, body, opts = {}) {
         <div class="nav-dropdown-panel">
           <a href="/nieuw/vracht">Vracht aanbieden</a>
           <a href="/nieuw/capaciteit">Capaciteit aanbieden</a>
+          <a href="/overzicht/offertes/nieuw">Offerte-aanvraag plaatsen</a>
         </div>
       </div>
       <a href="/bedrijven">Bedrijven</a>
