@@ -264,7 +264,6 @@ function registreer(app, deps) {
 
     const body = '<h1>Offerte-aanvragen</h1>'
       + '<p class="form-intro">Bedrijven uit het collectief plaatsen hier ritten die ze zelf niet kunnen rijden. Past een rit bij jouw capaciteit, schrijf dan in met je offerte. De aanvrager kiest daarna wie de rit krijgt. Je prijs is alleen zichtbaar voor de aanvrager.</p>'
-      + '<p style="margin-bottom:16px;"><a class="link-btn-outline" href="/overzicht/offertes/nieuw">+ Offerte-aanvraag plaatsen</a></p>'
       + (req.query.ingetrokken === '1' ? melding('Je offerte is ingetrokken.') : '')
       + (req.query.verwijderd === '1' ? melding('Je offerte-aanvraag is verwijderd.') : '')
       + '<table class="offers">' + kop + '<tbody>' + (open.map(rij).join('') || '<tr><td colspan="8" class="empty">Er staan nu geen open offerte-aanvragen.</td></tr>') + '</tbody></table>'
