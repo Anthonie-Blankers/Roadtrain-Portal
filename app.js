@@ -236,6 +236,7 @@ function layout(req, title, body, opts = {}) {
         <div class="nav-dropdown-panel">
           <a href="/overzicht">Actuele aanbiedingen</a>
           <a href="/overzicht/structureel-gezocht">Structureel gezocht</a>
+          <a href="/overzicht/offertes">Offerte-aanvragen</a>
         </div>
       </div>
       <div class="nav-dropdown">
@@ -1937,6 +1938,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
     </div>
   </form>
 
+  <p style="margin-bottom:16px;"><a href="/admin/offertes">Offerte-aanvragen beheren</a></p>
   <table class="offers bedrijven">
     <thead>
       <tr><th>Bedrijf</th><th>Code</th><th>Status</th><th>Toegevoegd</th><th>Online</th><th></th></tr>
@@ -2008,6 +2010,9 @@ app.post('/admin/bedrijven/:id/verwijderen', requireAdmin, ah(async (req, res) =
   res.redirect('/admin');
 }));
 
+const offertes = require('./offertes');
+offertes.registreer(app, { pool, layout, requireLogin, requireAdmin, ah, esc, landOptions, locatie });
+
 // generieke foutafhandeling voor async routes
 app.use((err, req, res, next) => {
   console.error(err);
@@ -2015,7 +2020,7 @@ app.use((err, req, res, next) => {
 });
 
 async function onderhoudAanbiedingen() { await pool.query("UPDATE offers SET status = 'vervuld' WHERE status = 'open' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE"); const { rows: teArchiverenVerlopen } = await pool.query("SELECT * FROM offers WHERE status = 'vervuld' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE - INTERVAL '7 days'"); for (const o of teArchiverenVerlopen) { await archiveerAanbieding(o); } await pool.query("DELETE FROM offers WHERE status = 'vervuld' AND COALESCE(NULLIF(losdatum_tot, ''), losdatum_van)::date < CURRENT_DATE - INTERVAL '7 days'"); } async function start() {
-  await migreer(); await onderhoudAanbiedingen(); setInterval(onderhoudAanbiedingen, 60 * 60 * 1000);
+  await migreer(); await offertes.migreer(pool); await onderhoudAanbiedingen(); setInterval(onderhoudAanbiedingen, 60 * 60 * 1000);
   app.listen(PORT, () => {
     console.log(`Combi-Match draait op http://localhost:${PORT}`);
   });
