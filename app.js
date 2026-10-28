@@ -1906,6 +1906,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
 
   const { rows: weesAanbiedingen } = await pool.query('SELECT * FROM offers WHERE bedrijf_id IS NULL'); const { rows: alleAanbiedingen } = await pool.query('SELECT * FROM offers'); const mailOverzicht = buildMailOverzicht(alleAanbiedingen);
 
+  const bccLijst = [...new Set(companies.filter(c => c.actief).flatMap(c => (c.beheer_email || '').split(/[;,\s]+/).filter(x => x.includes('@')).map(x => x.toLowerCase())))]; const bccParam = encodeURIComponent(bccLijst.join(',')); const updateUrl = 'mailto:?bcc=' + bccParam + '&subject=' + encodeURIComponent('Update CombiMatch') + '&body=' + encodeURIComponent('Hallo allemaal,\r\n\r\n\r\n\r\nMet vriendelijke groet,\r\nCombiMatch - The Roadtrain Exchange'); const overzichtUrl = mailOverzicht.mailtoUrl.replace('mailto:?', 'mailto:?bcc=' + bccParam + '&');
   const isOnline = (c) => c.laatst_actief && (Date.now() - new Date(c.laatst_actief).getTime()) < 5 * 60 * 1000;
   const aantalOnline = companies.filter(isOnline).length;
 
@@ -1974,7 +1975,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
   </form>
   ` : ''}
 
-  <p style="margin-top:20px;">${mailOverzicht.aantal ? (mailOverzicht.teLang ? `<a href="/admin/mail-overzicht-tekst">Overzicht kopiëren voor mail (${mailOverzicht.aantal})</a>` : `<a href="${esc(mailOverzicht.mailtoUrl)}">Verstuur overzicht per mail (${mailOverzicht.aantal})</a>`) : 'Geen actuele aanbiedingen om te versturen'} &middot; <a href="/admin/archief">Archief bekijken</a> &middot; <a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
+  <p style="margin-top:20px;">${mailOverzicht.aantal ? ((mailOverzicht.teLang || overzichtUrl.length > 2000) ? `<a href="/admin/mail-overzicht-tekst">Overzicht kopiëren voor mail (${mailOverzicht.aantal})</a>` : `<a href="${esc(overzichtUrl)}">Verstuur overzicht per mail (${mailOverzicht.aantal})</a>`) : 'Geen actuele aanbiedingen om te versturen'} &middot; <a href="${esc(updateUrl)}">Mail alle bedrijven (BCC, ${bccLijst.length} adressen)</a> &middot; <a href="/admin/archief">Archief bekijken</a> &middot; <a href="/admin/uitloggen">Uitloggen uit beheer</a></p>
   `;
   res.send(layout(req, 'Combi-Match - Beheer', body));
 }));
