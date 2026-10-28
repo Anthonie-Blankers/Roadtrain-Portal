@@ -1906,7 +1906,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
 
   const { rows: weesAanbiedingen } = await pool.query('SELECT * FROM offers WHERE bedrijf_id IS NULL'); const { rows: alleAanbiedingen } = await pool.query('SELECT * FROM offers'); const mailOverzicht = buildMailOverzicht(alleAanbiedingen);
 
-  const bccLijst = [...new Set(companies.filter(c => c.actief).flatMap(c => (c.beheer_email || '').split(/[;,\s]+/).filter(x => x.includes('@')).map(x => x.toLowerCase())))]; const bccParam = encodeURIComponent(bccLijst.join(',')); const updateUrl = 'mailto:?bcc=' + bccParam + '&subject=' + encodeURIComponent('Update CombiMatch') + '&body=' + encodeURIComponent('Hallo allemaal,\r\n\r\n\r\n\r\nMet vriendelijke groet,\r\nCombiMatch - The Roadtrain Exchange'); const overzichtUrl = mailOverzicht.mailtoUrl.replace('mailto:?', 'mailto:?bcc=' + bccParam + '&');
+  const bccLijst = [...new Set(companies.filter(c => c.actief).flatMap(c => (c.beheer_email || '').split(/[;,\s]+/).filter(x => x.includes('@')).map(x => x.toLowerCase())))]; const bccParam = encodeURIComponent(bccLijst.join('; ')); const updateUrl = 'mailto:?bcc=' + bccParam + '&subject=' + encodeURIComponent('Update CombiMatch') + '&body=' + encodeURIComponent('Hallo allemaal,\r\n\r\n\r\n\r\nMet vriendelijke groet,\r\nCombiMatch - The Roadtrain Exchange'); const overzichtUrl = mailOverzicht.mailtoUrl.replace('mailto:?', 'mailto:?bcc=' + bccParam + '&');
   const isOnline = (c) => c.laatst_actief && (Date.now() - new Date(c.laatst_actief).getTime()) < 5 * 60 * 1000;
   const aantalOnline = companies.filter(isOnline).length;
 
