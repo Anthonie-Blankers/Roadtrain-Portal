@@ -1917,7 +1917,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
       <td>${isOnline(c) ? '<span style="color:#1a7d3c;font-weight:600;">&#9679; Online</span>' : (c.laatst_actief ? `<span style="color:var(--grijs);">${tijdGeleden(c.laatst_actief)}</span>` : '<span style="color:var(--grijs);">Nog niet ingelogd</span>')}</td>
       <td style="white-space:nowrap;">
         <form method="post" action="/admin/bedrijven/${c.id}/toggle" style="display:inline;">
-          <button type="submit">${c.actief ? 'Non-actief zetten' : 'Activeren'}</button>
+          <button type="submit">${c.actief ? 'Non-actief' : 'Activeren'}</button>
         </form>
       </td>
     </tr>`).join('');
