@@ -94,6 +94,7 @@ async function migreer() {
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS zichtbare_velden TEXT`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS laatst_actief TIMESTAMPTZ`);
   await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS actieve_landen TEXT`);
+  await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS beheer_email TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ritregels (
       id TEXT PRIMARY KEY,
@@ -1910,7 +1911,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
 
   const rows = companies.map(c => `
     <tr>
-      <td><form method="post" action="/admin/bedrijven/${c.id}/bewerken" style="display:flex;gap:6px;"><input type="text" name="naam" value="${esc(c.naam)}" required style="width:150px;"><button type="submit">Wijzigen</button><button type="submit" formaction="/admin/bedrijven/${c.id}/verwijderen" formnovalidate onclick="return confirm('Dit bedrijf en de bijbehorende code definitief verwijderen?')">Verwijderen</button></form></td>
+      <td><form method="post" action="/admin/bedrijven/${c.id}/bewerken" style="display:flex;gap:6px;flex-wrap:wrap;"><input type="text" name="naam" value="${esc(c.naam)}" required style="width:150px;"><button type="submit">Wijzigen</button><button type="submit" formaction="/admin/bedrijven/${c.id}/verwijderen" formnovalidate onclick="return confirm('Dit bedrijf en de bijbehorende code definitief verwijderen?')">Verwijderen</button><input type="text" name="beheer_email" value="${esc(c.beheer_email || '')}" placeholder="e-mailadres(sen)" style="width:100%;"></form></td>
       <td><span class="code">${esc(c.code)}</span>${c.id === nieuwId ? ' <strong style="color:#012750;">(nieuw)</strong>' : ''}</td>
       <td>${c.actief ? 'Actief' : 'Non-actief'}</td>
       <td>${esc(String(c.aangemaakt_op).slice(0, 10))}</td>
@@ -1936,6 +1937,12 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
     </div>
   </form>
 
+  <details style="margin-bottom:16px;"><summary style="cursor:pointer;">Mailadressen automatisch aan bedrijven koppelen</summary>
+    <form method="post" action="/admin/bedrijven/mails-koppelen" style="margin-top:8px;max-width:640px;">
+      <textarea name="mails" rows="6" style="width:100%;" placeholder="Plak hier de lijst mailadressen (gescheiden door ; of regels)"></textarea>
+      <button type="submit" style="margin-top:6px;">Koppelen op domeinnaam</button>
+    </form>
+  </details>
   <p style="margin-bottom:16px;"><a href="/admin/offertes">Offerte-aanvragen beheren</a></p>
   <table class="offers bedrijven">
     <thead>
@@ -1998,7 +2005,7 @@ app.post('/admin/bedrijven', requireAdmin, ah(async (req, res) => {
   res.redirect(`/admin?nieuw=${id}`);
 }));
 
-app.post('/admin/bedrijven/:id/bewerken', requireAdmin, ah(async (req, res) => { const naam = (req.body.naam || '').trim(); if (!naam) return res.redirect('/admin'); await pool.query('UPDATE companies SET naam = $1 WHERE id = $2', [naam, req.params.id]); res.redirect('/admin'); })); app.post('/admin/bedrijven/:id/toggle', requireAdmin, ah(async (req, res) => {
+app.post('/admin/bedrijven/:id/bewerken', requireAdmin, ah(async (req, res) => { const naam = (req.body.naam || '').trim(); if (!naam) return res.redirect('/admin'); await pool.query('UPDATE companies SET naam = $1, beheer_email = $2 WHERE id = $3', [naam, (req.body.beheer_email || '').trim(), req.params.id]); res.redirect('/admin'); })); app.post('/admin/bedrijven/:id/toggle', requireAdmin, ah(async (req, res) => {
   await pool.query('UPDATE companies SET actief = NOT actief WHERE id = $1', [req.params.id]);
   res.redirect('/admin');
 }));
@@ -2006,6 +2013,49 @@ app.post('/admin/bedrijven/:id/bewerken', requireAdmin, ah(async (req, res) => {
 app.post('/admin/bedrijven/:id/verwijderen', requireAdmin, ah(async (req, res) => {
   await pool.query('DELETE FROM companies WHERE id = $1', [req.params.id]);
   res.redirect('/admin');
+}));
+
+function koppelMails(tekst, bedrijven) {
+  const stop = new Set(['transport','transporten','logistics','logistiek','logistic','group','groep','internationaal','international','holding','van','der','den','het','bv','nv','de','en','and','intl','expeditie','vervoer','trucking','freight','planning','info','contact']);
+  const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ');
+  const adressen = [...new Set((String(tekst).match(/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g) || []).map(a => a.toLowerCase()))];
+  const gratis = new Set(['gmail','hetnet','hotmail','outlook','live','kpnmail','ziggo','planet','xs4all','yahoo','icloud']);
+  const info = bedrijven.map(b => { const n = norm(b.naam); return { b, vol: n.replace(/ /g, ''), tokens: n.split(' ').filter(t => t.length >= 3 && !stop.has(t)) }; });
+  const gekoppeld = new Map(), geenMatch = [];
+  for (const a of adressen) {
+    const [lokaal, dom] = a.split('@');
+    const label = dom.split('.').slice(0, -1).join('').replace(/[^a-z0-9]/g, '');
+    const bron = gratis.has(dom.split('.')[0]) ? lokaal.replace(/[^a-z0-9]/g, '') : label;
+    let beste = null, score = 0, dubbel = false;
+    for (const i of info) {
+      let s = 0;
+      if (bron.length >= 4 && i.vol.length >= 4 && (i.vol.includes(bron) || bron.includes(i.vol))) s = Math.max(s, 100 + Math.min(bron.length, i.vol.length));
+      for (const t of i.tokens) if (t.length >= 4 && bron.includes(t)) s = Math.max(s, t.length);
+      if (s > score) { score = s; beste = i; dubbel = false; } else if (s === score && s > 0) dubbel = true;
+    }
+    if (beste && !dubbel) { const l = gekoppeld.get(beste.b.id) || []; l.push(a); gekoppeld.set(beste.b.id, l); } else geenMatch.push(a);
+  }
+  return { gekoppeld, geenMatch, totaal: adressen.length };
+}
+
+app.post('/admin/bedrijven/mails-koppelen', requireAdmin, ah(async (req, res) => {
+  const { rows: bedrijven } = await pool.query('SELECT id, naam, beheer_email FROM companies');
+  const r = koppelMails(req.body.mails || '', bedrijven);
+  const regels = [];
+  for (const [id, lijst] of r.gekoppeld) {
+    const b = bedrijven.find(x => x.id === id);
+    const bestaand = (b.beheer_email || '').split(/[;,\s]+/).filter(Boolean).map(x => x.toLowerCase());
+    const nieuw = [...new Set(bestaand.concat(lijst))];
+    await pool.query('UPDATE companies SET beheer_email = $1 WHERE id = $2', [nieuw.join('; '), id]);
+    regels.push(`<tr><td>${esc(b.naam)}</td><td>${esc(lijst.join('; '))}</td></tr>`);
+  }
+  const body = `<h1>Mailadressen gekoppeld</h1>
+  <p class="form-intro">${r.totaal} adressen gelezen, ${r.totaal - r.geenMatch.length} gekoppeld aan een bedrijf. Je kunt ze op de beheerpagina per bedrijf nog aanpassen.</p>
+  <table class="offers"><thead><tr><th>Bedrijf</th><th>Gekoppelde adressen</th></tr></thead><tbody>${regels.join('') || '<tr><td colspan="2" class="empty">Niets gekoppeld.</td></tr>'}</tbody></table>
+  <h2 style="margin-top:24px;">Geen bedrijf gevonden (${r.geenMatch.length})</h2>
+  <p class="form-intro">${r.geenMatch.length ? r.geenMatch.map(esc).join('<br>') : 'Alles is gekoppeld.'}</p>
+  <p style="margin-top:20px;"><a href="/admin">Terug naar beheer</a></p>`;
+  res.send(layout(req, 'Combi-Match - Mailadressen koppelen', body, { wideMain: true }));
 }));
 
 const offertes = require('./offertes');
