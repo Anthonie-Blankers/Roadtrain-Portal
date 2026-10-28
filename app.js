@@ -1910,7 +1910,7 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
 
   const rows = companies.map(c => `
     <tr>
-      <td><form method="post" action="/admin/bedrijven/${c.id}/bewerken" style="display:flex;gap:6px;"><input type="text" name="naam" value="${esc(c.naam)}" required style="width:150px;"><button type="submit">Wijzigen</button></form></td>
+      <td><form method="post" action="/admin/bedrijven/${c.id}/bewerken" style="display:flex;gap:6px;"><input type="text" name="naam" value="${esc(c.naam)}" required style="width:150px;"><button type="submit">Wijzigen</button><button type="submit" formaction="/admin/bedrijven/${c.id}/verwijderen" formnovalidate onclick="return confirm('Dit bedrijf en de bijbehorende code definitief verwijderen?')">Verwijderen</button></form></td>
       <td><span class="code">${esc(c.code)}</span>${c.id === nieuwId ? ' <strong style="color:#012750;">(nieuw)</strong>' : ''}</td>
       <td>${c.actief ? 'Actief' : 'Ingetrokken'}</td>
       <td>${esc(String(c.aangemaakt_op).slice(0, 10))}</td>
@@ -1918,9 +1918,6 @@ app.get('/admin', requireAdmin, ah(async (req, res) => {
       <td style="white-space:nowrap;">
         <form method="post" action="/admin/bedrijven/${c.id}/toggle" style="display:inline;">
           <button type="submit">${c.actief ? 'Intrekken' : 'Heractiveren'}</button>
-        </form>
-        <form method="post" action="/admin/bedrijven/${c.id}/verwijderen" style="display:inline;" onsubmit="return confirm('Dit bedrijf en de bijbehorende code definitief verwijderen?')">
-          <button type="submit">Verwijderen</button>
         </form>
       </td>
     </tr>`).join('');
