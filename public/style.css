@@ -248,12 +248,12 @@ table.offers.aanbiedingen th:nth-child(10), table.offers.aanbiedingen td:nth-chi
 .route-part { white-space: normal; }
 
 /* kolombreedtes voor het beheer-overzicht van bedrijven (6 kolommen, ruimere actiekolom) */
-table.offers.bedrijven th:nth-child(1), table.offers.bedrijven td:nth-child(1) { width: 22%; }
-table.offers.bedrijven th:nth-child(2), table.offers.bedrijven td:nth-child(2) { width: 12%; }
-table.offers.bedrijven th:nth-child(3), table.offers.bedrijven td:nth-child(3) { width: 10%; }
+table.offers.bedrijven th:nth-child(1), table.offers.bedrijven td:nth-child(1) { width: 34%; }
+table.offers.bedrijven th:nth-child(2), table.offers.bedrijven td:nth-child(2) { width: 11%; }
+table.offers.bedrijven th:nth-child(3), table.offers.bedrijven td:nth-child(3) { width: 9%; }
 table.offers.bedrijven th:nth-child(4), table.offers.bedrijven td:nth-child(4) { width: 11%; }
 table.offers.bedrijven th:nth-child(5), table.offers.bedrijven td:nth-child(5) { width: 15%; }
-table.offers.bedrijven th:nth-child(6), table.offers.bedrijven td:nth-child(6) { width: 30%; }
+table.offers.bedrijven th:nth-child(6), table.offers.bedrijven td:nth-child(6) { width: 20%; }
 table.offers.bedrijven td:nth-child(6) form { display: inline-block; margin-right: 6px; }
 table.offers.bedrijven td:nth-child(6) button { white-space: nowrap; }
 
